@@ -29,7 +29,12 @@ export function FurniturePieceMesh({ piece }: Props) {
   const explodeFactor = useStore((s) => s.explodeFactor);
 
   const isSelected = selectedPieceId === piece.id;
-  const canTransform = isSelected && (activeTool === 'move' || activeTool === 'select') && !explodedView;
+  const hasComponentSelected = isSelected && selectedComponentId != null &&
+    piece.components.some(c => c.id === selectedComponentId);
+  const canTransformPiece = isSelected && !hasComponentSelected &&
+    (activeTool === 'move' || activeTool === 'select') && !explodedView;
+  const canTransformComponent = isSelected && hasComponentSelected &&
+    (activeTool === 'move' || activeTool === 'select') && !explodedView && !piece.locked;
 
   // --- Exploded view animation ---
   const explodeGroupRefs = useRef<Map<string, THREE.Group>>(new Map());
@@ -129,6 +134,50 @@ export function FurniturePieceMesh({ piece }: Props) {
     state.setActiveSnapLines([]);
   }, []);
 
+  // --- Component-level drag ---
+  const compDragStartRef = useRef<Vec3>([0, 0, 0]);
+
+  const handleCompDragStart = useCallback(() => {
+    const state = useStore.getState();
+    const currentPiece = state.project.pieces.find(p => p.id === piece.id);
+    if (currentPiece && state.selectedComponentId) {
+      const comp = currentPiece.components.find(c => c.id === state.selectedComponentId);
+      if (comp) {
+        compDragStartRef.current = [...comp.position] as Vec3;
+      }
+    }
+  }, [piece.id]);
+
+  const handleCompDrag = useCallback((local: THREE.Matrix4) => {
+    const state = useStore.getState();
+    if (!state.selectedComponentId) return;
+
+    const pos = new THREE.Vector3();
+    const rot = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    local.decompose(pos, rot, scl);
+
+    const startPos = compDragStartRef.current;
+    const newPos: Vec3 = [
+      startPos[0] + worldToMm(pos.x),
+      startPos[1] + worldToMm(pos.y),
+      startPos[2] + worldToMm(pos.z),
+    ];
+
+    // Grid snap for component position
+    if (state.snapEnabled) {
+      newPos[0] = snapToGrid(newPos[0], state.gridSize);
+      newPos[1] = snapToGrid(newPos[1], state.gridSize);
+      newPos[2] = snapToGrid(newPos[2], state.gridSize);
+    }
+
+    state.updateComponent(piece.id, state.selectedComponentId, { position: newPos });
+  }, [piece.id]);
+
+  const handleCompDragEnd = useCallback(() => {
+    useStore.getState().pushHistory();
+  }, []);
+
   const px = mmToWorld(piece.position[0]);
   const py = mmToWorld(piece.position[1]);
   const pz = mmToWorld(piece.position[2]);
@@ -141,11 +190,9 @@ export function FurniturePieceMesh({ piece }: Props) {
     >
       {piece.components.map((comp, index) => {
         const isCompSelected = selectedComponentId === comp.id;
-        return (
-          <group
-            key={comp.id}
-            ref={(el) => { if (el) explodeGroupRefs.current.set(comp.id, el); }}
-          >
+
+        const meshContent = (
+          <>
             {comp.type === 'panel' && (
               <PanelMesh
                 panel={comp}
@@ -169,6 +216,31 @@ export function FurniturePieceMesh({ piece }: Props) {
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
               />
+            )}
+          </>
+        );
+
+        return (
+          <group
+            key={comp.id}
+            ref={(el) => { if (el) explodeGroupRefs.current.set(comp.id, el); }}
+          >
+            {isCompSelected && canTransformComponent ? (
+              <PivotControls
+                anchor={[0, 0, 0]}
+                depthTest={false}
+                scale={0.25}
+                lineWidth={2}
+                autoTransform={false}
+                onDragStart={handleCompDragStart}
+                onDrag={handleCompDrag}
+                onDragEnd={handleCompDragEnd}
+                disableRotations
+              >
+                {meshContent}
+              </PivotControls>
+            ) : (
+              meshContent
             )}
             {/* Exploded view label */}
             {explodedView && (
@@ -194,7 +266,7 @@ export function FurniturePieceMesh({ piece }: Props) {
     </group>
   );
 
-  if (canTransform && !piece.locked) {
+  if (canTransformPiece && !piece.locked) {
     return (
       <PivotControls
         anchor={[0, 0, 0]}
