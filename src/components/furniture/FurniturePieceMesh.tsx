@@ -20,6 +20,52 @@ function getComponentHeight(comp: Component): number {
   return 20;
 }
 
+/** Get the dimensions that can be scaled (excludes panel depth / thickness) */
+function getScalableDims(comp: Component): Record<string, number> {
+  if (comp.type === 'panel') return { width: comp.width, height: comp.height };
+  if (comp.type === 'leg') return { diameter: comp.diameter, height: comp.height };
+  if (comp.type === 'drawer-slide') return { length: comp.length };
+  return {};
+}
+
+/**
+ * Compute scaled dimensions accounting for component rotation.
+ * Maps parent-space scale axes to the component's local axes so that
+ * the correct dimension is scaled regardless of rotation — and panel
+ * depth (thickness) is never touched.
+ */
+function computeScaledDims(
+  savedDims: Record<string, number>,
+  parentScale: THREE.Vector3,
+  rotation: Vec3,
+): Record<string, number> {
+  const euler = new THREE.Euler(rotation[0], rotation[1], rotation[2]);
+  const localX = new THREE.Vector3(1, 0, 0).applyEuler(euler);
+  const localY = new THREE.Vector3(0, 1, 0).applyEuler(euler);
+  const localZ = new THREE.Vector3(0, 0, 1).applyEuler(euler);
+
+  // Effective scale along each local axis
+  const sxLocal = new THREE.Vector3(
+    localX.x * parentScale.x, localX.y * parentScale.y, localX.z * parentScale.z,
+  ).length();
+  const syLocal = new THREE.Vector3(
+    localY.x * parentScale.x, localY.y * parentScale.y, localY.z * parentScale.z,
+  ).length();
+  const szLocal = new THREE.Vector3(
+    localZ.x * parentScale.x, localZ.y * parentScale.y, localZ.z * parentScale.z,
+  ).length();
+
+  const result: Record<string, number> = {};
+  // width = local X,  height = local Y  (depth / thickness = local Z, excluded)
+  if (savedDims.width !== undefined) result.width = Math.max(1, Math.round(savedDims.width * sxLocal));
+  if (savedDims.height !== undefined) result.height = Math.max(1, Math.round(savedDims.height * syLocal));
+  // leg diameter — average XZ plane scale (cross-section is circular)
+  if (savedDims.diameter !== undefined) result.diameter = Math.max(1, Math.round(savedDims.diameter * (sxLocal + szLocal) / 2));
+  // drawer-slide length along local Z
+  if (savedDims.length !== undefined) result.length = Math.max(1, Math.round(savedDims.length * szLocal));
+  return result;
+}
+
 export function FurniturePieceMesh({ piece }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const selectedPieceId = useStore((s) => s.selectedPieceId);
@@ -72,13 +118,29 @@ export function FurniturePieceMesh({ piece }: Props) {
     }
   });
 
-  // --- Track drag start position ---
+  // --- Track drag start position + component data for scaling ---
   const dragStartPosRef = useRef<Vec3>([0, 0, 0]);
+  const dragStartComponentsRef = useRef<Array<{ id: string; position: Vec3; dims: Record<string, number> }>>([]);
+  const dragScaleCenterRef = useRef<Vec3>([0, 0, 0]);
 
   const handleDragStart = useCallback(() => {
     const currentPiece = useStore.getState().project.pieces.find(p => p.id === piece.id);
     if (currentPiece) {
       dragStartPosRef.current = [...currentPiece.position] as Vec3;
+      // Save component data for piece-level scaling
+      dragStartComponentsRef.current = currentPiece.components.map(c => ({
+        id: c.id,
+        position: [...c.position] as Vec3,
+        dims: getScalableDims(c),
+      }));
+      const n = currentPiece.components.length;
+      if (n > 0) {
+        dragScaleCenterRef.current = [
+          currentPiece.components.reduce((s, c) => s + c.position[0], 0) / n,
+          currentPiece.components.reduce((s, c) => s + c.position[1], 0) / n,
+          currentPiece.components.reduce((s, c) => s + c.position[2], 0) / n,
+        ] as Vec3;
+      }
     }
   }, [piece.id]);
 
@@ -89,8 +151,36 @@ export function FurniturePieceMesh({ piece }: Props) {
     const scl = new THREE.Vector3();
     local.decompose(pos, rot, scl);
 
-    // Read latest state directly to avoid stale closures
     const state = useStore.getState();
+
+    // Detect scaling (sphere handles) vs translation (arrow handles)
+    const isScaling = Math.abs(scl.x - 1) > 0.01 || Math.abs(scl.y - 1) > 0.01 || Math.abs(scl.z - 1) > 0.01;
+
+    if (isScaling) {
+      // Scale all component positions relative to center + scale dimensions
+      const center = dragScaleCenterRef.current;
+      const saved = dragStartComponentsRef.current;
+      const currentPiece = state.project.pieces.find(p => p.id === piece.id);
+      if (!currentPiece) return;
+
+      const newComponents = currentPiece.components.map(comp => {
+        const s = saved.find(sv => sv.id === comp.id);
+        if (!s) return comp;
+
+        const scaledPos: Vec3 = [
+          Math.round(center[0] + (s.position[0] - center[0]) * scl.x),
+          Math.round(center[1] + (s.position[1] - center[1]) * scl.y),
+          Math.round(center[2] + (s.position[2] - center[2]) * scl.z),
+        ];
+        const dimUpdates = computeScaledDims(s.dims, scl, comp.rotation);
+        return { ...comp, position: scaledPos, ...dimUpdates } as Component;
+      });
+
+      state.updatePiece(piece.id, { components: newComponents });
+      return;
+    }
+
+    // --- Translation mode ---
     const { room } = state.project;
     const allPieces = state.project.pieces;
 
@@ -136,6 +226,7 @@ export function FurniturePieceMesh({ piece }: Props) {
 
   // --- Component-level drag ---
   const compDragStartRef = useRef<Vec3>([0, 0, 0]);
+  const compDragStartDimsRef = useRef<Record<string, number>>({});
 
   const handleCompDragStart = useCallback(() => {
     const state = useStore.getState();
@@ -144,6 +235,7 @@ export function FurniturePieceMesh({ piece }: Props) {
       const comp = currentPiece.components.find(c => c.id === state.selectedComponentId);
       if (comp) {
         compDragStartRef.current = [...comp.position] as Vec3;
+        compDragStartDimsRef.current = getScalableDims(comp);
       }
     }
   }, [piece.id]);
@@ -157,6 +249,22 @@ export function FurniturePieceMesh({ piece }: Props) {
     const scl = new THREE.Vector3();
     local.decompose(pos, rot, scl);
 
+    const isScaling = Math.abs(scl.x - 1) > 0.01 || Math.abs(scl.y - 1) > 0.01 || Math.abs(scl.z - 1) > 0.01;
+
+    if (isScaling) {
+      // Scale dimensions only (position unchanged) — rotation-aware, skips thickness
+      const currentPiece = state.project.pieces.find(p => p.id === piece.id);
+      const comp = currentPiece?.components.find(c => c.id === state.selectedComponentId);
+      if (!comp) return;
+
+      const dimUpdates = computeScaledDims(compDragStartDimsRef.current, scl, comp.rotation);
+      if (Object.keys(dimUpdates).length > 0) {
+        state.updateComponent(piece.id, state.selectedComponentId, dimUpdates as Partial<Component>);
+      }
+      return;
+    }
+
+    // Translation mode
     const startPos = compDragStartRef.current;
     const newPos: Vec3 = [
       startPos[0] + worldToMm(pos.x),
@@ -164,7 +272,6 @@ export function FurniturePieceMesh({ piece }: Props) {
       startPos[2] + worldToMm(pos.z),
     ];
 
-    // Grid snap for component position
     if (state.snapEnabled) {
       newPos[0] = snapToGrid(newPos[0], state.gridSize);
       newPos[1] = snapToGrid(newPos[1], state.gridSize);
@@ -236,7 +343,6 @@ export function FurniturePieceMesh({ piece }: Props) {
                 onDrag={handleCompDrag}
                 onDragEnd={handleCompDragEnd}
                 disableRotations
-                disableScaling
               >
                 {meshContent}
               </PivotControls>
@@ -279,7 +385,6 @@ export function FurniturePieceMesh({ piece }: Props) {
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
         disableRotations={activeTool === 'move'}
-        disableScaling
       >
         {inner}
       </PivotControls>
