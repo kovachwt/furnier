@@ -4,7 +4,7 @@
 
 A frontend-only SPA for designing custom furniture in 3D, built with React + Three.js (via React Three Fiber). Users place parametric furniture (cabinets, desks, dressers, bookshelves) inside a configurable room, edit individual panels and hardware, then generate cut lists, sheet layouts, a bill of materials, and assembly instructions.
 
-No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON.
+No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON. Projects can also be shared via URL — the entire project is compressed into the URL hash fragment.
 
 ## Deployment
 
@@ -36,11 +36,12 @@ src/
     cutlist.ts          ← Guillotine bin-packing algorithm + BOM generation
     snap.ts             ← Grid snap + snap-to-face + snap-to-target helpers
     pdfExport.ts        ← PDF generation (cut list, BOM, assembly) via jsPDF
+    sharing.ts          ← URL-based project sharing (compress/decompress via fflate)
   components/
     Scene.tsx           ← R3F Canvas with lighting, camera, OrbitControls, SnapGuides
     room/               ← Room geometry (walls, floor, grid, labels)
     furniture/          ← 3D meshes for panels, legs, hardware (+ exploded view animation)
-    ui/                 ← Sidebar panels (toolbar, forms, editors, piece list, constraints)
+    ui/                 ← Sidebar panels (toolbar, forms, editors, piece list, constraints, share dialog)
     cutlist/            ← Cut list modal (sheet diagrams, BOM table, assembly notes, PDF export)
   App.tsx               ← Layout: toolbar on top, sidebar on left, viewport fills rest
   index.css             ← All styles (no CSS framework, just custom properties)
@@ -57,6 +58,7 @@ src/
 - **Guillotine bin-packing**: chosen over free-form nesting because real panel saws only make through-cuts. The algorithm is in `cutlist.ts`, ~120 lines, using Best Short Side Fit heuristic.
 - **No cost tracking**: deliberately excluded from scope. The BOM is quantities + specs only.
 - **No backend**: localStorage auto-save + JSON file export/import. The project file is a direct JSON serialization of the `Project` type.
+- **URL sharing**: projects are shared by compressing the JSON with deflate (via fflate), encoding as base64url, and placing it in the URL hash fragment (`#share=...`). Default materials are stripped before compression and restored on load. The hash is never sent to the server, keeping shared data private. Typical projects (5–20 pieces) produce URLs of 2,000–8,000 chars, well within browser limits.
 
 ## State Shape (Zustand)
 
@@ -133,6 +135,20 @@ Snap logic is in `utils/snap.ts`:
 - `snapPieceToFaces()` — checks each face of the dragged piece against all targets; returns adjusted position + snap guide info
 - `snapToGrid()` / `snapPositionToGrid()` — grid-based snapping (fallback for axes not face-snapped)
 - Visual snap guides are rendered by the `SnapGuides` component in `Scene.tsx`
+
+### Modifying the sharing system
+
+Sharing logic is in `utils/sharing.ts`:
+- `compressProject()` — strips default materials, JSON-serializes with version byte, deflate-compresses, encodes as base64url
+- `decompressProject()` — reverses the above, merges default materials back in
+- `generateShareUrl()` / `getShareFromHash()` / `clearShareHash()` — URL helpers
+- `estimateShareUrlLength()` / `MAX_SAFE_URL_LENGTH` — guard against oversized URLs
+
+UI components:
+- `ProjectActions.tsx` — "🔗 Share" button, generates URL, copies to clipboard, shows toast
+- `ShareDialog.tsx` — mounted in App.tsx, checks URL hash on load, shows confirmation dialog before importing a shared project
+
+To change what data is included/excluded in share URLs, edit `compressProject()` and `decompressProject()`. The `DEFAULT_MATERIAL_IDS` set controls which materials are considered built-in and omitted from the URL. Bump the `v` (version) field in the share data if the format changes.
 
 ### Modifying the cut list algorithm
 

@@ -2,7 +2,7 @@
 
 A frontend-only web application for designing custom furniture in 3D. Design cabinets, dressers, desks, bookshelves, and more by arranging panels, legs, and hardware inside a configurable room. The app produces cut lists, sheet layout diagrams, a bill of materials, and assembly instructions — exportable as PDF.
 
-No backend required — everything runs in the browser.
+No backend required — everything runs in the browser. Share designs with anyone via a link.
 
 ## Live Demo
 
@@ -91,6 +91,7 @@ All defined with standard sheet sizes (2440×1220mm) and grain direction flag.
 ### Project Management
 - Auto-saves to localStorage on every change
 - Export/import project as `.json` file
+- **Share via link** — compress the entire project into a URL and share it; no backend needed, links never expire
 - Undo/redo with Ctrl+Z / Ctrl+Y (50-step history)
 - Delete key removes selected piece or component
 - Escape to deselect
@@ -127,6 +128,7 @@ src/
     templates.ts              Parametric furniture generators
     cutlist.ts                Guillotine bin-packing, BOM generation
     pdfExport.ts              PDF generation (cut list, BOM, assembly) via jsPDF
+    sharing.ts                URL-based project sharing (deflate + base64url in hash)
   components/
     Scene.tsx                 R3F Canvas, lighting, camera
     room/RoomBox.tsx          Room walls, floor, grid, dimension labels
@@ -141,7 +143,8 @@ src/
       AddFurniture.tsx        Template selector and parameters
       PieceList.tsx           List of all pieces in the project
       PieceEditor.tsx         Selected piece/component property editor
-      ProjectActions.tsx      Save/load/reset buttons
+      ProjectActions.tsx      Save/load/reset/share buttons
+      ShareDialog.tsx        Confirmation dialog for loading shared projects from URL
     cutlist/
       CutListView.tsx         Modal with sheet layouts, BOM, assembly instructions
   index.css                   Full application styles
