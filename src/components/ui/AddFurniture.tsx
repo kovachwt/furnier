@@ -26,18 +26,34 @@ export function AddFurniture() {
   const handleAdd = () => {
     let piece;
     switch (template) {
-      case 'cabinet':
-        piece = createCabinet({ width, height, depth, shelves, doors, materialId: matId }, materials);
+      case 'cabinet': {
+        const params = { width, height, depth, shelves, doors, materialId: matId };
+        piece = createCabinet(params, materials);
+        piece.templateType = 'cabinet';
+        piece.templateParams = { ...params };
         break;
-      case 'bookshelf':
-        piece = createBookshelf({ width, height, depth, shelves, materialId: matId }, materials);
+      }
+      case 'bookshelf': {
+        const params = { width, height, depth, shelves, materialId: matId };
+        piece = createBookshelf(params, materials);
+        piece.templateType = 'bookshelf';
+        piece.templateParams = { ...params };
         break;
-      case 'desk':
-        piece = createDesk({ width, height: 750, depth, legStyle, drawers: 0, materialId: matId }, materials);
+      }
+      case 'desk': {
+        const params = { width, height: 750, depth, legStyle, drawers: 0, materialId: matId };
+        piece = createDesk(params, materials);
+        piece.templateType = 'desk';
+        piece.templateParams = { ...params };
         break;
-      case 'dresser':
-        piece = createDresser({ width, height, depth, drawerRows, materialId: matId }, materials);
+      }
+      case 'dresser': {
+        const params = { width, height, depth, drawerRows, materialId: matId };
+        piece = createDresser(params, materials);
+        piece.templateType = 'dresser';
+        piece.templateParams = { ...params };
         break;
+      }
       case 'panel': {
         const mat = materials.find(m => m.id === matId);
         const t = mat?.thickness ?? 18;

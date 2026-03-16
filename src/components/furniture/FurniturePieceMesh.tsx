@@ -1,16 +1,23 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
-import { PivotControls } from '@react-three/drei';
-import type { FurniturePiece } from '../../types';
+import { PivotControls, Text } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import type { FurniturePiece, Vec3, Component } from '../../types';
 import { useStore } from '../../store/useStore';
 import { mmToWorld, worldToMm } from '../room/RoomBox';
 import { PanelMesh } from './PanelMesh';
 import { LegMesh } from './LegMesh';
 import { HardwareMesh } from './HardwareMesh';
-import { snapPositionToGrid } from '../../utils/snap';
+import { snapToGrid, collectSnapTargets, snapPieceToFaces } from '../../utils/snap';
 
 interface Props {
   piece: FurniturePiece;
+}
+
+function getComponentHeight(comp: Component): number {
+  if (comp.type === 'panel') return Math.max(comp.width, comp.height);
+  if (comp.type === 'leg') return comp.height;
+  return 20;
 }
 
 export function FurniturePieceMesh({ piece }: Props) {
@@ -18,19 +25,59 @@ export function FurniturePieceMesh({ piece }: Props) {
   const selectedPieceId = useStore((s) => s.selectedPieceId);
   const selectedComponentId = useStore((s) => s.selectedComponentId);
   const activeTool = useStore((s) => s.activeTool);
-  const updatePiece = useStore((s) => s.updatePiece);
-  const pushHistory = useStore((s) => s.pushHistory);
-  const snapEnabled = useStore((s) => s.snapEnabled);
-  const gridSize = useStore((s) => s.gridSize);
+  const explodedView = useStore((s) => s.explodedView);
+  const explodeFactor = useStore((s) => s.explodeFactor);
 
   const isSelected = selectedPieceId === piece.id;
-  const canTransform = isSelected && (activeTool === 'move' || activeTool === 'select');
+  const canTransform = isSelected && (activeTool === 'move' || activeTool === 'select') && !explodedView;
 
+  // --- Exploded view animation ---
+  const explodeGroupRefs = useRef<Map<string, THREE.Group>>(new Map());
+  const currentExplode = useRef(0);
+  const targetExplode = explodedView ? explodeFactor : 0;
+
+  const center = useMemo(() => {
+    const n = piece.components.length;
+    if (n === 0) return [0, 0, 0] as Vec3;
+    const sum = piece.components.reduce(
+      (acc, c) => [acc[0] + c.position[0], acc[1] + c.position[1], acc[2] + c.position[2]] as Vec3,
+      [0, 0, 0] as Vec3
+    );
+    return [sum[0] / n, sum[1] / n, sum[2] / n] as Vec3;
+  }, [piece.components]);
+
+  useFrame((_, delta) => {
+    const speed = 5;
+    const prev = currentExplode.current;
+    currentExplode.current += (targetExplode - prev) * Math.min(1, delta * speed);
+    const f = currentExplode.current;
+
+    for (const comp of piece.components) {
+      const group = explodeGroupRefs.current.get(comp.id);
+      if (group) {
+        const dx = comp.position[0] - center[0];
+        const dy = comp.position[1] - center[1];
+        const dz = comp.position[2] - center[2];
+        group.position.set(
+          mmToWorld(dx * f),
+          mmToWorld(dy * f),
+          mmToWorld(dz * f)
+        );
+      }
+    }
+  });
+
+  // --- Drag handler with snap-to-face ---
   const handleDrag = useCallback((local: THREE.Matrix4) => {
     const pos = new THREE.Vector3();
     const rot = new THREE.Quaternion();
     const scl = new THREE.Vector3();
     local.decompose(pos, rot, scl);
+
+    // Read latest state directly to avoid stale closures
+    const state = useStore.getState();
+    const { room } = state.project;
+    const allPieces = state.project.pieces;
 
     let newPos: [number, number, number] = [
       worldToMm(pos.x),
@@ -38,19 +85,37 @@ export function FurniturePieceMesh({ piece }: Props) {
       worldToMm(pos.z),
     ];
 
-    if (snapEnabled) {
-      newPos = snapPositionToGrid(newPos, gridSize);
+    let snappedInfo: { x?: string; y?: string; z?: string } = {};
+
+    // Snap-to-face first (takes priority)
+    if (state.snapToFaces) {
+      const targets = collectSnapTargets(room, allPieces, piece.id);
+      const result = snapPieceToFaces(newPos, piece, targets, state.snapThreshold);
+      newPos = result.snapped;
+      snappedInfo = result.snappedAxes;
+      state.setActiveSnapLines(result.snapLines);
+    } else {
+      state.setActiveSnapLines([]);
+    }
+
+    // Grid snap for axes that didn't face-snap
+    if (state.snapEnabled) {
+      if (!snappedInfo.x) newPos[0] = snapToGrid(newPos[0], state.gridSize);
+      if (!snappedInfo.y) newPos[1] = snapToGrid(newPos[1], state.gridSize);
+      if (!snappedInfo.z) newPos[2] = snapToGrid(newPos[2], state.gridSize);
     }
 
     // Clamp Y >= 0 (don't go below floor)
     newPos[1] = Math.max(0, newPos[1]);
 
-    updatePiece(piece.id, { position: newPos });
-  }, [piece.id, updatePiece, snapEnabled, gridSize]);
+    state.updatePiece(piece.id, { position: newPos });
+  }, [piece.id, piece.components]);
 
   const handleDragEnd = useCallback(() => {
-    pushHistory();
-  }, [pushHistory]);
+    const state = useStore.getState();
+    state.pushHistory();
+    state.setActiveSnapLines([]);
+  }, []);
 
   const px = mmToWorld(piece.position[0]);
   const py = mmToWorld(piece.position[1]);
@@ -62,44 +127,57 @@ export function FurniturePieceMesh({ piece }: Props) {
       position={[px, py, pz]}
       rotation={piece.rotation as unknown as THREE.Euler}
     >
-      {piece.components.map((comp) => {
+      {piece.components.map((comp, index) => {
         const isCompSelected = selectedComponentId === comp.id;
-        switch (comp.type) {
-          case 'panel':
-            return (
+        return (
+          <group
+            key={comp.id}
+            ref={(el) => { if (el) explodeGroupRefs.current.set(comp.id, el); }}
+          >
+            {comp.type === 'panel' && (
               <PanelMesh
-                key={comp.id}
                 panel={comp}
                 pieceId={piece.id}
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
               />
-            );
-          case 'leg':
-            return (
+            )}
+            {comp.type === 'leg' && (
               <LegMesh
-                key={comp.id}
                 leg={comp}
                 pieceId={piece.id}
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
               />
-            );
-          case 'hinge':
-          case 'drawer-slide':
-          case 'shelf-pin':
-            return (
+            )}
+            {(comp.type === 'hinge' || comp.type === 'drawer-slide' || comp.type === 'shelf-pin') && (
               <HardwareMesh
-                key={comp.id}
                 component={comp}
                 pieceId={piece.id}
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
               />
-            );
-          default:
-            return null;
-        }
+            )}
+            {/* Exploded view label */}
+            {explodedView && (
+              <Text
+                position={[
+                  mmToWorld(comp.position[0]),
+                  mmToWorld(comp.position[1]) + mmToWorld(getComponentHeight(comp) / 2 + 40),
+                  mmToWorld(comp.position[2]),
+                ]}
+                fontSize={0.03}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="bottom"
+                outlineWidth={0.003}
+                outlineColor="#000000"
+              >
+                {`${index + 1}. ${comp.name}`}
+              </Text>
+            )}
+          </group>
+        );
       })}
     </group>
   );

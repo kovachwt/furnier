@@ -3,8 +3,11 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { produce } from 'immer';
 import { v4 as uuid } from 'uuid';
 import type {
-  Project, Room, FurniturePiece, Component, Material, Tool
+  Project, Room, FurniturePiece, Component, Material, Tool,
+  ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams,
 } from '../types';
+import type { SnapLine } from '../utils/snap';
+import { createCabinet, createBookshelf, createDesk, createDresser } from '../utils/templates';
 
 const DEFAULT_MATERIALS: Material[] = [
   {
@@ -82,11 +85,19 @@ interface AppState {
   selectedComponentId: string | null;
   activeTool: Tool;
   snapEnabled: boolean;
+  snapToFaces: boolean;
   snapThreshold: number; // mm
   showDimensions: boolean;
   showGrid: boolean;
   gridSize: number; // mm
   sawKerf: number; // mm
+
+  // Exploded view
+  explodedView: boolean;
+  explodeFactor: number;
+
+  // Snap guides
+  activeSnapLines: SnapLine[];
 
   // History
   history: HistoryEntry[];
@@ -100,11 +111,16 @@ interface AppState {
   removePiece: (id: string) => void;
   updatePiece: (id: string, updates: Partial<FurniturePiece>) => void;
   duplicatePiece: (id: string) => string | null;
+  regeneratePiece: (id: string, params: CabinetParams | BookshelfParams | DeskParams | DresserParams) => void;
 
   // Components
   addComponent: (pieceId: string, component: Omit<Component, 'id'>) => string | null;
   removeComponent: (pieceId: string, componentId: string) => void;
   updateComponent: (pieceId: string, componentId: string, updates: Partial<Component>) => void;
+
+  // Constraints
+  addConstraint: (pieceId: string, constraint: Omit<ParametricConstraint, 'id'>) => void;
+  removeConstraint: (pieceId: string, constraintId: string) => void;
 
   // Materials
   addMaterial: (material: Omit<Material, 'id'>) => string;
@@ -115,13 +131,17 @@ interface AppState {
   setSelection: (pieceId: string | null, componentId?: string | null) => void;
   clearSelection: () => void;
 
-  // Tools
+  // Tools & toggles
   setActiveTool: (tool: Tool) => void;
   setSnapEnabled: (enabled: boolean) => void;
+  setSnapToFaces: (enabled: boolean) => void;
   setShowDimensions: (show: boolean) => void;
   setShowGrid: (show: boolean) => void;
   setGridSize: (size: number) => void;
   setSawKerf: (kerf: number) => void;
+  setExplodedView: (enabled: boolean) => void;
+  setExplodeFactor: (factor: number) => void;
+  setActiveSnapLines: (lines: SnapLine[]) => void;
 
   // History
   pushHistory: () => void;
@@ -147,11 +167,16 @@ export const useStore = create<AppState>()(
     selectedComponentId: null,
     activeTool: 'select',
     snapEnabled: true,
-    snapThreshold: 20,
+    snapToFaces: true,
+    snapThreshold: 25,
     showDimensions: true,
     showGrid: true,
     gridSize: 50,
     sawKerf: 3,
+
+    explodedView: false,
+    explodeFactor: 1.5,
+    activeSnapLines: [],
 
     history: [],
     historyIndex: -1,
@@ -202,10 +227,68 @@ export const useStore = create<AppState>()(
           piece.position[2],
         ];
         clone.components = clone.components.map((c) => ({ ...c, id: uuid() }));
+        // Clear constraints (component IDs changed)
+        clone.constraints = [];
         s.project.pieces.push(clone);
       }));
       get().pushHistory();
       return newId;
+    },
+
+    regeneratePiece: (id, params) => {
+      const state = get();
+      const piece = state.project.pieces.find((p) => p.id === id);
+      if (!piece || !piece.templateType) return;
+
+      const materials = state.project.materials;
+      let newPiece: FurniturePiece;
+
+      switch (piece.templateType) {
+        case 'cabinet':
+          newPiece = createCabinet(params as CabinetParams, materials);
+          break;
+        case 'bookshelf':
+          newPiece = createBookshelf(params as BookshelfParams, materials);
+          break;
+        case 'desk':
+          newPiece = createDesk(params as DeskParams, materials);
+          break;
+        case 'dresser':
+          newPiece = createDresser(params as DresserParams, materials);
+          break;
+        default:
+          return;
+      }
+
+      // Preserve piece identity
+      newPiece.id = piece.id;
+      newPiece.name = piece.name;
+      newPiece.position = [...piece.position];
+      newPiece.rotation = [...piece.rotation];
+      newPiece.locked = piece.locked;
+      newPiece.templateType = piece.templateType;
+      newPiece.templateParams = JSON.parse(JSON.stringify(params));
+
+      // Match component IDs by name where possible
+      for (const newComp of newPiece.components) {
+        const oldComp = piece.components.find(c => c.name === newComp.name);
+        if (oldComp) {
+          newComp.id = oldComp.id;
+        }
+      }
+
+      // Filter constraints to keep only valid ones
+      const validConstraints = (piece.constraints ?? []).filter(c => {
+        return newPiece.components.some(comp => comp.id === c.sourceComponentId) &&
+               newPiece.components.some(comp => comp.id === c.targetComponentId);
+      });
+      newPiece.constraints = validConstraints;
+
+      set(produce((s: AppState) => {
+        const idx = s.project.pieces.findIndex(p => p.id === id);
+        if (idx >= 0) s.project.pieces[idx] = newPiece;
+      }));
+      get().pushHistory();
     },
 
     addComponent: (pieceId, component) => {
@@ -225,6 +308,12 @@ export const useStore = create<AppState>()(
         const piece = s.project.pieces.find((p) => p.id === pieceId);
         if (piece) {
           piece.components = piece.components.filter((c) => c.id !== componentId);
+          // Clean up constraints referencing removed component
+          if (piece.constraints) {
+            piece.constraints = piece.constraints.filter(
+              c => c.sourceComponentId !== componentId && c.targetComponentId !== componentId
+            );
+          }
           if (s.selectedComponentId === componentId) {
             s.selectedComponentId = null;
           }
@@ -239,6 +328,40 @@ export const useStore = create<AppState>()(
         if (piece) {
           const comp = piece.components.find((c) => c.id === componentId);
           if (comp) Object.assign(comp, updates);
+
+          // Apply parametric constraints triggered by this change
+          const constraints = piece.constraints ?? [];
+          for (const constraint of constraints) {
+            if (constraint.sourceComponentId !== componentId) continue;
+
+            const source = piece.components.find(c => c.id === constraint.sourceComponentId);
+            const target = piece.components.find(c => c.id === constraint.targetComponentId);
+
+            if (!source || !target) continue;
+            if (source.type !== 'panel' || target.type !== 'panel') continue;
+
+            const sourceVal = (source as unknown as Record<string, unknown>)[constraint.sourceProperty];
+            if (typeof sourceVal === 'number') {
+              (target as unknown as Record<string, unknown>)[constraint.targetProperty] = sourceVal + constraint.offset;
+            }
+          }
+        }
+      })),
+
+    addConstraint: (pieceId, constraint) =>
+      set(produce((s: AppState) => {
+        const piece = s.project.pieces.find((p) => p.id === pieceId);
+        if (piece) {
+          if (!piece.constraints) piece.constraints = [];
+          piece.constraints.push({ ...constraint, id: uuid() });
+        }
+      })),
+
+    removeConstraint: (pieceId, constraintId) =>
+      set(produce((s: AppState) => {
+        const piece = s.project.pieces.find((p) => p.id === pieceId);
+        if (piece && piece.constraints) {
+          piece.constraints = piece.constraints.filter(c => c.id !== constraintId);
         }
       })),
 
@@ -269,10 +392,14 @@ export const useStore = create<AppState>()(
 
     setActiveTool: (tool) => set({ activeTool: tool }),
     setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),
+    setSnapToFaces: (enabled) => set({ snapToFaces: enabled }),
     setShowDimensions: (show) => set({ showDimensions: show }),
     setShowGrid: (show) => set({ showGrid: show }),
     setGridSize: (size) => set({ gridSize: size }),
     setSawKerf: (kerf) => set({ sawKerf: kerf }),
+    setExplodedView: (enabled) => set({ explodedView: enabled }),
+    setExplodeFactor: (factor) => set({ explodeFactor: factor }),
+    setActiveSnapLines: (lines) => set({ activeSnapLines: lines }),
 
     pushHistory: () =>
       set(produce((s: AppState) => {

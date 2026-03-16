@@ -13,10 +13,16 @@ export function Toolbar() {
   const redo = useStore((s) => s.redo);
   const snapEnabled = useStore((s) => s.snapEnabled);
   const setSnapEnabled = useStore((s) => s.setSnapEnabled);
+  const snapToFaces = useStore((s) => s.snapToFaces);
+  const setSnapToFaces = useStore((s) => s.setSnapToFaces);
   const showDimensions = useStore((s) => s.showDimensions);
   const setShowDimensions = useStore((s) => s.setShowDimensions);
   const showGrid = useStore((s) => s.showGrid);
   const setShowGrid = useStore((s) => s.setShowGrid);
+  const explodedView = useStore((s) => s.explodedView);
+  const setExplodedView = useStore((s) => s.setExplodedView);
+  const explodeFactor = useStore((s) => s.explodeFactor);
+  const setExplodeFactor = useStore((s) => s.setExplodeFactor);
 
   return (
     <div className="toolbar">
@@ -49,7 +55,14 @@ export function Toolbar() {
           onClick={() => setSnapEnabled(!snapEnabled)}
           title="Snap to grid"
         >
-          ⊞ Snap
+          ⊞ Grid
+        </button>
+        <button
+          className={`tool-btn ${snapToFaces ? 'active' : ''}`}
+          onClick={() => setSnapToFaces(!snapToFaces)}
+          title="Snap to panel faces"
+        >
+          ⊟ Faces
         </button>
         <button
           className={`tool-btn ${showGrid ? 'active' : ''}`}
@@ -65,6 +78,31 @@ export function Toolbar() {
         >
           ↔ Dims
         </button>
+      </div>
+
+      <div className="tool-separator" />
+
+      <div className="tool-group">
+        <button
+          className={`tool-btn ${explodedView ? 'active' : ''}`}
+          onClick={() => setExplodedView(!explodedView)}
+          title="Exploded assembly view"
+        >
+          💥 Explode
+        </button>
+        {explodedView && (
+          <div className="explode-slider" title={`Explode factor: ${explodeFactor.toFixed(1)}×`}>
+            <input
+              type="range"
+              min={0.5}
+              max={3}
+              step={0.1}
+              value={explodeFactor}
+              onChange={(e) => setExplodeFactor(Number(e.target.value))}
+            />
+            <span className="explode-value">{explodeFactor.toFixed(1)}×</span>
+          </div>
+        )}
       </div>
     </div>
   );

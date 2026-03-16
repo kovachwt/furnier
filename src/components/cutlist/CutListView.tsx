@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { generateCutList, generateBOM } from '../../utils/cutlist';
+import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
 export function CutListView({ onClose }: { onClose: () => void }) {
   const pieces = useStore((s) => s.project.pieces);
   const materials = useStore((s) => s.project.materials);
   const sawKerf = useStore((s) => s.sawKerf);
+  const projectName = useStore((s) => s.project.name);
 
   const { layouts, unplaceable } = useMemo(
     () => generateCutList(pieces, materials, sawKerf),
@@ -15,12 +17,19 @@ export function CutListView({ onClose }: { onClose: () => void }) {
 
   const bom = useMemo(() => generateBOM(pieces, materials), [pieces, materials]);
 
+  const handleExportPDF = useCallback(() => {
+    exportProjectPDF(projectName, layouts, bom, pieces, materials, sawKerf);
+  }, [projectName, layouts, bom, pieces, materials, sawKerf]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content cutlist-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Cut List & Parts</h2>
-          <button className="btn-close" onClick={onClose}>✕</button>
+          <div className="modal-header-actions">
+            <button className="btn-primary" onClick={handleExportPDF}>📄 Export PDF</button>
+            <button className="btn-close" onClick={onClose}>✕</button>
+          </div>
         </div>
 
         <div className="modal-body">

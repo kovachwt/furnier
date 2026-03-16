@@ -68,6 +68,15 @@ export interface ShelfPin {
 
 export type Component = Panel | Leg | Hinge | DrawerSlide | ShelfPin;
 
+export interface ParametricConstraint {
+  id: string;
+  targetComponentId: string;
+  targetProperty: 'width' | 'height';
+  sourceComponentId: string;
+  sourceProperty: 'width' | 'height';
+  offset: number;
+}
+
 export interface FurniturePiece {
   id: string;
   name: string;
@@ -75,6 +84,9 @@ export interface FurniturePiece {
   rotation: Vec3;
   components: Component[];
   locked: boolean;
+  templateType?: 'cabinet' | 'bookshelf' | 'desk' | 'dresser';
+  templateParams?: CabinetParams | BookshelfParams | DeskParams | DresserParams;
+  constraints?: ParametricConstraint[];
 }
 
 export interface Room {

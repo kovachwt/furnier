@@ -1,8 +1,57 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment, Line } from '@react-three/drei';
 import { useStore } from '../store/useStore';
-import { RoomBox } from './room/RoomBox';
+import { RoomBox, mmToWorld } from './room/RoomBox';
 import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
+
+function SnapGuides() {
+  const activeSnapLines = useStore((s) => s.activeSnapLines);
+  const room = useStore((s) => s.project.room);
+
+  if (activeSnapLines.length === 0) return null;
+
+  const hw = mmToWorld(room.width / 2);
+  const hd = mmToWorld(room.depth / 2);
+  const h = mmToWorld(room.height);
+
+  return (
+    <>
+      {activeSnapLines.map((snap, i) => {
+        const v = mmToWorld(snap.value);
+        const lines: [number, number, number][][] = [];
+
+        if (snap.axis === 'x') {
+          // Vertical line on back wall + line on floor
+          lines.push([[v, 0, -hd], [v, h, -hd]]);
+          lines.push([[v, 0, -hd], [v, 0, hd]]);
+        } else if (snap.axis === 'y') {
+          // Horizontal line on back wall + line on left wall
+          lines.push([[-hw, v, -hd], [hw, v, -hd]]);
+          lines.push([[-hw, v, -hd], [-hw, v, hd]]);
+        } else {
+          // Line on floor + line on left wall
+          lines.push([[-hw, 0, v], [hw, 0, v]]);
+          lines.push([[-hw, 0, v], [-hw, h, v]]);
+        }
+
+        return (
+          <group key={i}>
+            {lines.map((pts, j) => (
+              <Line
+                key={j}
+                points={pts}
+                color="#ffdd00"
+                lineWidth={1.5}
+                transparent
+                opacity={0.8}
+              />
+            ))}
+          </group>
+        );
+      })}
+    </>
+  );
+}
 
 export function Scene() {
   const pieces = useStore((s) => s.project.pieces);
@@ -31,6 +80,8 @@ export function Scene() {
       {pieces.map((piece) => (
         <FurniturePieceMesh key={piece.id} piece={piece} />
       ))}
+
+      <SnapGuides />
 
       <OrbitControls
         makeDefault

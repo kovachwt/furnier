@@ -360,6 +360,130 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+/* Exploded view slider in toolbar */
+.explode-slider {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.explode-slider input[type="range"] {
+  width: 80px;
+  height: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.explode-value {
+  font-size: 10px;
+  color: var(--text-secondary);
+  min-width: 28px;
+}
+
+/* Template params section */
+.template-params-section {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(74, 158, 255, 0.06);
+  border: 1px solid rgba(74, 158, 255, 0.2);
+  border-radius: var(--radius);
+}
+
+.template-params-section h4 {
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+/* Constraint section */
+.constraint-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.constraint-section h4 {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.constraint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.constraint-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: var(--bg-input);
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.constraint-text {
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.constraint-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 6px;
+}
+
+.constraint-add-form {
+  padding: 8px;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  margin-top: 6px;
+}
+
+.constraint-add-form .form-row label {
+  flex: 0 0 65px;
+}
+
+.btn-tiny {
+  padding: 1px 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.btn-tiny:hover {
+  background: var(--bg-hover);
+}
+
+.btn-danger-tiny {
+  border-color: var(--danger);
+  color: var(--danger);
+  padding: 1px 4px;
+}
+
+.btn-danger-tiny:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* Modal header actions */
+.modal-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* Viewport */
 .viewport {
   flex: 1;
