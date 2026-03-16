@@ -1,6 +1,6 @@
 # Furniture Designer
 
-A frontend-only web application for designing custom furniture in 3D. Design cabinets, dressers, desks, bookshelves, and more by arranging panels, legs, and hardware inside a configurable room. The app produces cut lists, sheet layout diagrams, a bill of materials, and assembly instructions.
+A frontend-only web application for designing custom furniture in 3D. Design cabinets, dressers, desks, bookshelves, and more by arranging panels, legs, and hardware inside a configurable room. The app produces cut lists, sheet layout diagrams, a bill of materials, and assembly instructions — exportable as PDF.
 
 No backend required — everything runs in the browser.
 
@@ -35,6 +35,8 @@ npx vite preview
 - Click a piece to select it, double-click to select an individual component
 - PivotControls gizmo for moving/rotating selected furniture
 - Grid snapping (configurable grid size)
+- **Snap-to-face** — panel faces snap to adjacent panel faces and room walls during drag, with yellow guide lines showing active snaps (rotation-aware)
+- **Exploded view** — animated explosion of components for assembly visualization, with numbered labels and adjustable spread factor (0.5×–3.0×)
 
 ### Parametric Furniture Templates
 - **Cabinet** — left/right sides, top, bottom, hardboard back, N shelves
@@ -43,7 +45,7 @@ npx vite preview
 - **Dresser** — sides, top, bottom, back, drawer fronts, horizontal dividers, drawer slides per row
 - **Single Panel** — freeform, for custom builds
 
-All templates are configurable (dimensions, material, shelf/drawer count, leg style) and explode into individual editable components on creation.
+All templates are configurable (dimensions, material, shelf/drawer count, leg style) and explode into individual editable components on creation. Template-based pieces can be **re-parameterized** — edit the original parameters and click "Regenerate" to rebuild all components while preserving piece identity and position.
 
 ### Component Editor
 - Edit any panel: dimensions, material, position, rotation
@@ -52,6 +54,7 @@ All templates are configurable (dimensions, material, shelf/drawer count, leg st
 - Add/remove panels and legs to any piece
 - Duplicate or delete whole furniture pieces
 - Lock pieces to prevent accidental movement
+- **Parametric constraints** — link panel dimensions (width/height) between components with optional offset; when a source panel changes, constrained targets auto-update
 
 ### Materials (6 preloaded)
 - White Melamine 18mm & 25mm
@@ -77,6 +80,13 @@ All defined with standard sheet sizes (2440×1220mm) and grain direction flag.
 - Per-piece step-by-step ordering (bottom-up by Y position)
 - Lists each panel placement with exact dimensions and position
 - Then lists hardware attachment steps
+
+### PDF Export
+- Full project export to PDF from the Cut List modal
+- Title page with project summary (piece count, sheet count, saw kerf)
+- Sheet layout diagrams with colored panels, dimensions, and cut detail tables
+- Bill of materials table with sheet requirements
+- Detailed assembly instructions with edge banding notes
 
 ### Project Management
 - Auto-saves to localStorage on every change
@@ -113,9 +123,10 @@ src/
   types/index.ts              Data model (Room, Panel, Leg, Hinge, etc.)
   store/useStore.ts           Zustand store (state, actions, undo/redo, persistence)
   utils/
-    snap.ts                   Snap-to-grid and snap-to-target logic
+    snap.ts                   Snap-to-grid, snap-to-face, and snap-to-target logic
     templates.ts              Parametric furniture generators
     cutlist.ts                Guillotine bin-packing, BOM generation
+    pdfExport.ts              PDF generation (cut list, BOM, assembly) via jsPDF
   components/
     Scene.tsx                 R3F Canvas, lighting, camera
     room/RoomBox.tsx          Room walls, floor, grid, dimension labels
@@ -148,6 +159,9 @@ Project
 ├── Materials[] { name, thickness, sheetWidth, sheetHeight, color, grainDirection }
 └── Pieces[]
     ├── name, position, rotation, locked
+    ├── templateType?, templateParams?     ← for re-parameterization
+    ├── constraints?[]                     ← parametric links between components
+    │   └── { sourceComponentId, sourceProperty, targetComponentId, targetProperty, offset }
     └── Components[]
         ├── Panel  { width, height, depth, materialId, edgeBanding }
         ├── Leg    { diameter, height, style }

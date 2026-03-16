@@ -34,13 +34,14 @@ src/
   utils/
     templates.ts        ← Parametric generators: createCabinet(), createBookshelf(), createDesk(), createDresser()
     cutlist.ts          ← Guillotine bin-packing algorithm + BOM generation
-    snap.ts             ← Grid snap + snap-to-target helpers
+    snap.ts             ← Grid snap + snap-to-face + snap-to-target helpers
+    pdfExport.ts        ← PDF generation (cut list, BOM, assembly) via jsPDF
   components/
-    Scene.tsx           ← R3F Canvas with lighting, camera, OrbitControls
+    Scene.tsx           ← R3F Canvas with lighting, camera, OrbitControls, SnapGuides
     room/               ← Room geometry (walls, floor, grid, labels)
-    furniture/          ← 3D meshes for panels, legs, hardware
-    ui/                 ← Sidebar panels (toolbar, forms, editors, piece list)
-    cutlist/            ← Cut list modal (sheet diagrams, BOM table, assembly notes)
+    furniture/          ← 3D meshes for panels, legs, hardware (+ exploded view animation)
+    ui/                 ← Sidebar panels (toolbar, forms, editors, piece list, constraints)
+    cutlist/            ← Cut list modal (sheet diagrams, BOM table, assembly notes, PDF export)
   App.tsx               ← Layout: toolbar on top, sidebar on left, viewport fills rest
   index.css             ← All styles (no CSS framework, just custom properties)
 ```
@@ -49,7 +50,10 @@ src/
 
 - **Units**: everything internal is in millimeters. The 3D scene uses a 1:1000 scale (`mmToWorld()` / `worldToMm()` in `RoomBox.tsx`).
 - **Zustand + Immer**: state is deeply nested (project → pieces → components), so Immer's `produce()` is used everywhere for safe mutations. Subscriptions use `subscribeWithSelector` middleware.
-- **Parametric templates generate flat component arrays**: a cabinet template produces ~6-10 Panel objects with pre-computed positions. After creation, every panel is independently editable — templates are not "live" parametric objects.
+- **Parametric templates generate flat component arrays**: a cabinet template produces ~6-10 Panel objects with pre-computed positions. After creation, every panel is independently editable. Template-based pieces store their `templateType` and `templateParams` so they can be regenerated with new parameters while preserving piece identity.
+- **Parametric constraints**: optional `ParametricConstraint` links between panel properties (width/height) within a piece. When a source component changes, constrained targets auto-update. Constraint propagation runs inside `updateComponent()` in the store.
+- **Snap-to-face**: during drag, each face of the dragged piece's panels is checked against faces of all other pieces' panels and room walls. Rotation-aware AABB half-extents ensure correct face positions for rotated panels. Face snaps take priority over grid snaps.
+- **Exploded view**: purely a rendering effect — component positions in the store are never modified. `useFrame` + refs animate wrapper `<group>` offsets toward/away from the piece center. Labels use drei's `Text` component.
 - **Guillotine bin-packing**: chosen over free-form nesting because real panel saws only make through-cuts. The algorithm is in `cutlist.ts`, ~120 lines, using Best Short Side Fit heuristic.
 - **No cost tracking**: deliberately excluded from scope. The BOM is quantities + specs only.
 - **No backend**: localStorage auto-save + JSON file export/import. The project file is a direct JSON serialization of the `Project` type.
@@ -63,13 +67,18 @@ project: Project          ← room, pieces[], materials[]
 selectedPieceId           ← currently selected furniture piece
 selectedComponentId       ← currently selected sub-component (panel, leg, etc.)
 activeTool                ← 'select' | 'move'
-snapEnabled, gridSize     ← snapping config
+snapEnabled, gridSize     ← grid snapping config
+snapToFaces               ← face-to-face snapping (panel edges, walls)
+snapThreshold             ← mm, proximity threshold for face snapping
 showDimensions, showGrid  ← viewport toggles
 sawKerf                   ← mm, used by cut list generator
+explodedView              ← whether exploded assembly view is active
+explodeFactor             ← 0.5–3.0, how far components spread apart
+activeSnapLines           ← SnapLine[], transient guide lines during drag
 history[], historyIndex   ← undo/redo stack (stores pieces snapshots)
 ```
 
-Actions are methods on the same store object. History is pushed after any structural change (add/remove/duplicate). Position updates during drag do NOT push history — only `onDragEnd` does.
+Actions are methods on the same store object. History is pushed after any structural change (add/remove/duplicate/regenerate). Position updates during drag do NOT push history — only `onDragEnd` does.
 
 ## Conventions
 
@@ -88,6 +97,9 @@ Actions are methods on the same store object. History is pushed after any struct
 2. Add generator function in `utils/templates.ts` (see `createCabinet` as reference)
 3. Add option to the template dropdown in `components/ui/AddFurniture.tsx`
 4. Add parameter inputs (conditionally rendered based on template type)
+5. In `handleAdd()`, set `piece.templateType` and `piece.templateParams` so the piece supports re-parameterization
+6. Add the template type to the `regeneratePiece` switch in `store/useStore.ts`
+7. Add template-specific parameter inputs to `TemplateParams` in `PieceEditor.tsx`
 
 ### Adding a new component type
 
@@ -105,12 +117,39 @@ Materials are data, not code. Either:
 - Add to `DEFAULT_MATERIALS` array in `store/useStore.ts`
 - Or add at runtime via the store's `addMaterial()` action (no UI for this yet)
 
+### Adding a parametric constraint
+
+Constraints link panel dimensions within a piece. They live on `FurniturePiece.constraints[]`:
+1. Each `ParametricConstraint` has `sourceComponentId`, `sourceProperty` ('width'|'height'), `targetComponentId`, `targetProperty`, and `offset`
+2. When a source component is updated via `updateComponent()`, the store automatically applies all constraints where `sourceComponentId` matches
+3. Users can add/remove constraints via the "🔗 Constraints" section in PieceEditor
+4. Constraints are cleaned up automatically when components are removed or pieces are regenerated
+
+### Modifying the snap system
+
+Snap logic is in `utils/snap.ts`:
+- `getAABBHalfExtents()` — rotation-aware bounding box half-extents (XYZ Euler order)
+- `collectSnapTargets()` — gathers face positions from room walls and all panel faces (rotation-aware)
+- `snapPieceToFaces()` — checks each face of the dragged piece against all targets; returns adjusted position + snap guide info
+- `snapToGrid()` / `snapPositionToGrid()` — grid-based snapping (fallback for axes not face-snapped)
+- Visual snap guides are rendered by the `SnapGuides` component in `Scene.tsx`
+
 ### Modifying the cut list algorithm
 
 All logic is in `utils/cutlist.ts`:
 - `guillotinePack()` — the core bin-packing function
 - `generateCutList()` — orchestrates: extract panels → group by material → pack each group
 - `generateBOM()` — iterates all components, aggregates by type
+
+### Modifying the PDF export
+
+PDF generation is in `utils/pdfExport.ts`:
+- `exportProjectPDF()` — main entry point, orchestrates all pages
+- `drawTitlePage()` — project summary
+- `drawSheetLayout()` — one page per sheet with colored panel diagrams + detail table
+- `drawBOM()` — bill of materials table + sheet requirements
+- `drawAssembly()` — per-piece step-by-step instructions with edge banding notes
+- Uses jsPDF (v4). All measurements in mm on A4 portrait pages.
 
 ### Changing the room/panel scale
 
@@ -132,12 +171,12 @@ No test suite yet. To verify correctness:
 
 ## Potential Future Work
 
-- Snap-to-face (snap panels to adjacent panel faces, not just grid)
-- Parametric constraints (e.g., shelf width locked to cabinet interior width)
-- Exploded view animation for assembly visualization
-- PDF export (jsPDF is already a dependency, just not wired up yet)
 - DXF export for CNC machines
 - glTF export for sharing 3D models
 - Material editor UI (add/edit/remove materials)
 - Door/window cutouts in room walls
 - Instanced rendering for large projects (100+ panels)
+- Snap guide lines with distance annotations during drag
+- Constraint graph visualization (show links between constrained components)
+- Animated assembly sequence (step-through, not just static exploded view)
+- Auto-generate constraints from templates during creation
