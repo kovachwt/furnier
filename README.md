@@ -4,6 +4,12 @@ A frontend-only web application for designing custom furniture in 3D. Design cab
 
 No backend required — everything runs in the browser.
 
+## Live Demo
+
+**https://kovachwt.github.io/furnier/**
+
+Automatically deployed from `main` via GitHub Actions.
+
 ## Quick Start
 
 ```bash

@@ -6,6 +6,14 @@ A frontend-only SPA for designing custom furniture in 3D, built with React + Thr
 
 No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON.
 
+## Deployment
+
+Live at **https://kovachwt.github.io/furnier/**
+
+Auto-deployed via GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`. The workflow runs `npm ci && npm run build` and deploys the `dist/` folder to GitHub Pages.
+
+The Vite config sets `base: '/furnier/'` so asset paths resolve correctly under the repo subpath.
+
 ## Build & Run
 
 ```bash
