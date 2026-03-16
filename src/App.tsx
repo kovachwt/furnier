@@ -7,6 +7,7 @@ import { PieceList } from './components/ui/PieceList';
 import { PieceEditor } from './components/ui/PieceEditor';
 import { ProjectActions } from './components/ui/ProjectActions';
 import { CutListView } from './components/cutlist/CutListView';
+import { ShareDialog } from './components/ui/ShareDialog';
 import { useStore } from './store/useStore';
 
 export default function App() {
@@ -94,6 +95,7 @@ export default function App() {
       </div>
 
       {showCutList && <CutListView onClose={() => setShowCutList(false)} />}
+      <ShareDialog />
     </div>
   );
 }
