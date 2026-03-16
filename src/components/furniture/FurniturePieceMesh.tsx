@@ -205,7 +205,6 @@ export function FurniturePieceMesh({ piece }: Props) {
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
-        offset={[px, py, pz]}
         disableRotations={activeTool === 'move'}
       >
         {inner}
