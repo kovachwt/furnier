@@ -169,14 +169,3 @@ No test suite yet. To verify correctness:
 - `npm run build` — full production build
 - Manual testing in browser: add each template type, verify 3D rendering, open cut list, check sheet layouts look sane
 
-## Potential Future Work
-
-- DXF export for CNC machines
-- glTF export for sharing 3D models
-- Material editor UI (add/edit/remove materials)
-- Door/window cutouts in room walls
-- Instanced rendering for large projects (100+ panels)
-- Snap guide lines with distance annotations during drag
-- Constraint graph visualization (show links between constrained components)
-- Animated assembly sequence (step-through, not just static exploded view)
-- Auto-generate constraints from templates during creation
