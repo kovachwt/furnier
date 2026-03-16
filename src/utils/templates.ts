@@ -1,0 +1,296 @@
+import { v4 as uuid } from 'uuid';
+import type {
+  FurniturePiece, Panel, Leg, DrawerSlide, Vec3, Material,
+  CabinetParams, BookshelfParams, DeskParams, DresserParams
+} from '../types';
+
+function makePanel(
+  name: string,
+  width: number,
+  height: number,
+  materialId: string,
+  thickness: number,
+  position: Vec3,
+  rotation: Vec3 = [0, 0, 0],
+  edgeBanding = { top: false, bottom: false, left: false, right: false }
+): Panel {
+  return {
+    id: uuid(),
+    type: 'panel',
+    name,
+    width,
+    height,
+    depth: thickness,
+    materialId,
+    position,
+    rotation,
+    edgeBanding,
+  };
+}
+
+export function createCabinet(params: CabinetParams, materials: Material[]): FurniturePiece {
+  const mat = materials.find(m => m.id === params.materialId);
+  const t = mat?.thickness ?? 18;
+  const { width, height, depth } = params;
+  const innerW = width - 2 * t;
+  const innerH = height - 2 * t;
+  const components: Panel[] = [];
+
+  // Left side
+  components.push(makePanel('Left Side', depth, height, params.materialId, t,
+    [-(width / 2) + t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: false, right: true }
+  ));
+
+  // Right side
+  components.push(makePanel('Right Side', depth, height, params.materialId, t,
+    [(width / 2) - t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: true, right: false }
+  ));
+
+  // Top
+  components.push(makePanel('Top', innerW, depth, params.materialId, t,
+    [0, height - t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: false, right: false }
+  ));
+
+  // Bottom
+  components.push(makePanel('Bottom', innerW, depth, params.materialId, t,
+    [0, t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: false, right: false }
+  ));
+
+  // Back panel (thinner material)
+  components.push(makePanel('Back', innerW, innerH, 'hardboard-3', 3,
+    [0, height / 2, -(depth / 2) + 1.5],
+    [0, 0, 0],
+  ));
+
+  // Shelves
+  if (params.shelves > 0) {
+    const spacing = innerH / (params.shelves + 1);
+    for (let i = 1; i <= params.shelves; i++) {
+      components.push(makePanel(`Shelf ${i}`, innerW, depth - t, params.materialId, t,
+        [0, t + spacing * i, t / 2],
+        [Math.PI / 2, 0, 0],
+        { top: false, bottom: false, left: false, right: true }
+      ));
+    }
+  }
+
+  return {
+    id: uuid(),
+    name: 'Cabinet',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components,
+    locked: false,
+  };
+}
+
+export function createBookshelf(params: BookshelfParams, materials: Material[]): FurniturePiece {
+  const mat = materials.find(m => m.id === params.materialId);
+  const t = mat?.thickness ?? 18;
+  const { width, height, depth } = params;
+  const innerW = width - 2 * t;
+  const innerH = height - 2 * t;
+  const components: Panel[] = [];
+
+  // Left side
+  components.push(makePanel('Left Side', depth, height, params.materialId, t,
+    [-(width / 2) + t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: false, right: true }
+  ));
+
+  // Right side
+  components.push(makePanel('Right Side', depth, height, params.materialId, t,
+    [(width / 2) - t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: true, bottom: false, left: false, right: false }
+  ));
+
+  // Top
+  components.push(makePanel('Top', width, depth, params.materialId, t,
+    [0, height - t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: true, right: true }
+  ));
+
+  // Bottom
+  components.push(makePanel('Bottom', width, depth, params.materialId, t,
+    [0, t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: true, right: true }
+  ));
+
+  // Back panel
+  components.push(makePanel('Back', innerW, innerH, 'hardboard-3', 3,
+    [0, height / 2, -(depth / 2) + 1.5],
+    [0, 0, 0],
+  ));
+
+  // Shelves
+  const spacing = innerH / (params.shelves + 1);
+  for (let i = 1; i <= params.shelves; i++) {
+    components.push(makePanel(`Shelf ${i}`, innerW, depth - 3, params.materialId, t,
+      [0, t + spacing * i, 1.5],
+      [Math.PI / 2, 0, 0],
+      { top: false, bottom: false, left: false, right: true }
+    ));
+  }
+
+  return {
+    id: uuid(),
+    name: 'Bookshelf',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components,
+    locked: false,
+  };
+}
+
+export function createDesk(params: DeskParams, materials: Material[]): FurniturePiece {
+  const mat = materials.find(m => m.id === params.materialId);
+  const t = mat?.thickness ?? 25;
+  const { width, height, depth, legStyle } = params;
+  const components: (Panel | Leg)[] = [];
+
+  // Desktop
+  components.push(makePanel('Desktop', width, depth, params.materialId, t,
+    [0, height - t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: true, right: true }
+  ));
+
+  // 4 legs
+  const legH = height - t;
+  const legInset = 50; // mm from edge
+  const positions: [string, Vec3][] = [
+    ['Front-Left Leg', [-(width / 2) + legInset, legH / 2, (depth / 2) - legInset]],
+    ['Front-Right Leg', [(width / 2) - legInset, legH / 2, (depth / 2) - legInset]],
+    ['Back-Left Leg', [-(width / 2) + legInset, legH / 2, -(depth / 2) + legInset]],
+    ['Back-Right Leg', [(width / 2) - legInset, legH / 2, -(depth / 2) + legInset]],
+  ];
+
+  for (const [name, pos] of positions) {
+    components.push({
+      id: uuid(),
+      type: 'leg',
+      name,
+      diameter: legStyle === 'square' ? 50 : 40,
+      height: legH,
+      style: legStyle,
+      position: pos,
+      rotation: [0, 0, 0],
+    });
+  }
+
+  return {
+    id: uuid(),
+    name: 'Desk',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components,
+    locked: false,
+  };
+}
+
+export function createDresser(params: DresserParams, materials: Material[]): FurniturePiece {
+  const mat = materials.find(m => m.id === params.materialId);
+  const t = mat?.thickness ?? 18;
+  const { width, height, depth, drawerRows } = params;
+  const innerW = width - 2 * t;
+  const innerH = height - 2 * t;
+  const components: (Panel | DrawerSlide)[] = [];
+
+  // Left side
+  components.push(makePanel('Left Side', depth, height, params.materialId, t,
+    [-(width / 2) + t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: false, right: true }
+  ));
+
+  // Right side
+  components.push(makePanel('Right Side', depth, height, params.materialId, t,
+    [(width / 2) - t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: true, right: false }
+  ));
+
+  // Top
+  components.push(makePanel('Top', width, depth, params.materialId, t,
+    [0, height - t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: true, right: true }
+  ));
+
+  // Bottom
+  components.push(makePanel('Bottom', width, depth, params.materialId, t,
+    [0, t / 2, 0],
+    [Math.PI / 2, 0, 0],
+  ));
+
+  // Back
+  components.push(makePanel('Back', innerW, innerH, 'hardboard-3', 3,
+    [0, height / 2, -(depth / 2) + 1.5],
+    [0, 0, 0],
+  ));
+
+  // Drawer dividers and fronts
+  const drawerH = innerH / drawerRows;
+  const drawerInnerH = drawerH - t; // minus divider thickness
+  const slideLength = depth - 50;
+
+  for (let i = 0; i < drawerRows; i++) {
+    const yBase = t + i * drawerH;
+
+    // Divider (horizontal panel between drawers) - skip for bottom row (uses bottom panel)
+    if (i > 0) {
+      components.push(makePanel(`Divider ${i}`, innerW, depth - 3, params.materialId, t,
+        [0, yBase, 1.5],
+        [Math.PI / 2, 0, 0],
+      ));
+    }
+
+    // Drawer front
+    components.push(makePanel(`Drawer Front ${i + 1}`, innerW - 4, drawerInnerH - 4, params.materialId, t,
+      [0, yBase + drawerH / 2, depth / 2 - t / 2],
+      [0, 0, 0],
+      { top: true, bottom: true, left: true, right: true }
+    ));
+
+    // Drawer slides (pair)
+    components.push({
+      id: uuid(),
+      type: 'drawer-slide',
+      name: `Slide Left R${i + 1}`,
+      length: slideLength,
+      slideType: 'soft-close',
+      position: [-(innerW / 2) + 5, yBase + drawerH / 2, 0],
+      rotation: [0, 0, 0],
+    });
+    components.push({
+      id: uuid(),
+      type: 'drawer-slide',
+      name: `Slide Right R${i + 1}`,
+      length: slideLength,
+      slideType: 'soft-close',
+      position: [(innerW / 2) - 5, yBase + drawerH / 2, 0],
+      rotation: [0, 0, 0],
+    });
+  }
+
+  return {
+    id: uuid(),
+    name: 'Dresser',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components,
+    locked: false,
+  };
+}
