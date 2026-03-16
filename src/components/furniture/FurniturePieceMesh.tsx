@@ -67,6 +67,16 @@ export function FurniturePieceMesh({ piece }: Props) {
     }
   });
 
+  // --- Track drag start position ---
+  const dragStartPosRef = useRef<Vec3>([0, 0, 0]);
+
+  const handleDragStart = useCallback(() => {
+    const currentPiece = useStore.getState().project.pieces.find(p => p.id === piece.id);
+    if (currentPiece) {
+      dragStartPosRef.current = [...currentPiece.position] as Vec3;
+    }
+  }, [piece.id]);
+
   // --- Drag handler with snap-to-face ---
   const handleDrag = useCallback((local: THREE.Matrix4) => {
     const pos = new THREE.Vector3();
@@ -79,10 +89,12 @@ export function FurniturePieceMesh({ piece }: Props) {
     const { room } = state.project;
     const allPieces = state.project.pieces;
 
+    // local matrix is the drag DELTA from drag start, add to the start position
+    const startPos = dragStartPosRef.current;
     let newPos: [number, number, number] = [
-      worldToMm(pos.x),
-      worldToMm(pos.y),
-      worldToMm(pos.z),
+      startPos[0] + worldToMm(pos.x),
+      startPos[1] + worldToMm(pos.y),
+      startPos[2] + worldToMm(pos.z),
     ];
 
     let snappedInfo: { x?: string; y?: string; z?: string } = {};
@@ -189,6 +201,8 @@ export function FurniturePieceMesh({ piece }: Props) {
         depthTest={false}
         scale={0.4}
         lineWidth={2}
+        autoTransform={false}
+        onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
         offset={[px, py, pz]}
