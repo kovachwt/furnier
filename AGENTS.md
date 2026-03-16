@@ -23,6 +23,8 @@ npm run build        # production build to dist/
 npx tsc --noEmit     # type check without emitting
 ```
 
+IMPORTANT: always commit to git after making changes, so that the changes can immediately be tested on GH pages.
+
 ## Architecture Overview
 
 ```
