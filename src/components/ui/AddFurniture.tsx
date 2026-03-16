@@ -9,6 +9,7 @@ type TemplateType = 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'panel';
 export function AddFurniture() {
   const addPiece = useStore((s) => s.addPiece);
   const materials = useStore((s) => s.project.materials);
+  const room = useStore((s) => s.project.room);
   const setSelection = useStore((s) => s.setSelection);
 
   const [template, setTemplate] = useState<TemplateType>('cabinet');
@@ -81,6 +82,10 @@ export function AddFurniture() {
     }
 
     if (piece) {
+      // Place against the back wall, centered on X, on the floor
+      const mat = materials.find(m => m.id === matId);
+      const pieceDepth = template === 'panel' ? (mat?.thickness ?? 18) : depth;
+      piece.position = [0, 0, -room.depth / 2 + pieceDepth / 2];
       const id = addPiece(piece);
       setSelection(id);
     }
