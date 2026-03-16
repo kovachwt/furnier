@@ -236,6 +236,7 @@ export function FurniturePieceMesh({ piece }: Props) {
                 onDrag={handleCompDrag}
                 onDragEnd={handleCompDragEnd}
                 disableRotations
+                disableScaling
               >
                 {meshContent}
               </PivotControls>
@@ -278,6 +279,7 @@ export function FurniturePieceMesh({ piece }: Props) {
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
         disableRotations={activeTool === 'move'}
+        disableScaling
       >
         {inner}
       </PivotControls>
