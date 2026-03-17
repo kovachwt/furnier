@@ -24,15 +24,12 @@ const groups: ShortcutGroup[] = [
     ],
   },
   {
-    title: 'Tools & Toggles',
+    title: 'Camera',
     shortcuts: [
-      { keys: 'S', desc: 'Select tool' },
-      { keys: 'W', desc: 'Move tool' },
-      { keys: 'G', desc: 'Toggle grid visibility' },
-      { keys: 'N', desc: 'Toggle grid snap' },
-      { keys: 'F', desc: 'Toggle face snap' },
-      { keys: 'D', desc: 'Toggle dimensions' },
-      { keys: 'X', desc: 'Toggle exploded view' },
+      { keys: 'W / S', desc: 'Move forward / back' },
+      { keys: 'A / D', desc: 'Move left / right' },
+      { keys: 'Q / E', desc: 'Orbit left / right' },
+      { keys: 'R / F', desc: 'Move up / down' },
     ],
   },
   {

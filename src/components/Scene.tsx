@@ -3,6 +3,7 @@ import { OrbitControls, Environment, Line } from '@react-three/drei';
 import { useStore } from '../store/useStore';
 import { RoomBox, mmToWorld } from './room/RoomBox';
 import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
+import { KeyboardCameraControls } from './KeyboardCameraControls';
 
 function SnapGuides() {
   const activeSnapLines = useStore((s) => s.activeSnapLines);
@@ -92,6 +93,8 @@ export function Scene() {
         maxPolarAngle={Math.PI / 2 + 0.1}
         target={[0, 1, 0]}
       />
+
+      <KeyboardCameraControls />
     </Canvas>
   );
 }

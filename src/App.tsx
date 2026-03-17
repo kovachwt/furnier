@@ -97,14 +97,7 @@ export default function App() {
       if (e.key === 'PageUp')     { e.preventDefault(); state.nudgeSelectedPiece(0, nudgeAmount, 0); return; }
       if (e.key === 'PageDown')   { e.preventDefault(); state.nudgeSelectedPiece(0, -nudgeAmount, 0); return; }
 
-      // --- Tool & toggle shortcuts (single keys) ---
-      if (e.key === 's') { state.setActiveTool('select'); return; }
-      if (e.key === 'w') { state.setActiveTool('move'); return; }
-      if (e.key === 'g') { state.setShowGrid(!state.showGrid); return; }
-      if (e.key === 'n') { state.setSnapEnabled(!state.snapEnabled); return; }
-      if (e.key === 'f') { state.setSnapToFaces(!state.snapToFaces); return; }
-      if (e.key === 'd') { state.setShowDimensions(!state.showDimensions); return; }
-      if (e.key === 'x') { state.setExplodedView(!state.explodedView); return; }
+      // Camera keys (WASD, QE, RF) are handled by KeyboardCameraControls inside the Canvas
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
