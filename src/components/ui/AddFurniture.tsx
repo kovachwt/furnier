@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { createCabinet, createBookshelf, createDesk, createDresser } from '../../utils/templates';
+import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet } from '../../utils/templates';
 import { v4 as uuid } from 'uuid';
 import type { Panel, Vec3 } from '../../types';
 
-type TemplateType = 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'panel';
+type TemplateType = 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'door-cabinet' | 'panel';
 
 export function AddFurniture() {
   const addPiece = useStore((s) => s.addPiece);
@@ -20,7 +20,7 @@ export function AddFurniture() {
   const [height, setHeight] = useState(720);
   const [depth, setDepth] = useState(400);
   const [shelves, setShelves] = useState(2);
-  const [doors] = useState(1);
+  const [doors, setDoors] = useState(1);
   const [drawerRows, setDrawerRows] = useState(4);
   const [legStyle, setLegStyle] = useState<'round' | 'tapered' | 'square'>('round');
 
@@ -52,6 +52,13 @@ export function AddFurniture() {
         const params = { width, height, depth, drawerRows, materialId: matId };
         piece = createDresser(params, materials);
         piece.templateType = 'dresser';
+        piece.templateParams = { ...params };
+        break;
+      }
+      case 'door-cabinet': {
+        const params = { width, height, depth, shelves, doors, materialId: matId };
+        piece = createDoorCabinet(params, materials);
+        piece.templateType = 'door-cabinet';
         piece.templateParams = { ...params };
         break;
       }
@@ -98,7 +105,8 @@ export function AddFurniture() {
       <div className="form-row">
         <label>Type</label>
         <select value={template} onChange={(e) => setTemplate(e.target.value as TemplateType)}>
-          <option value="cabinet">Cabinet</option>
+          <option value="cabinet">Cabinet (open)</option>
+          <option value="door-cabinet">Cabinet (with doors)</option>
           <option value="bookshelf">Bookshelf</option>
           <option value="desk">Desk</option>
           <option value="dresser">Dresser</option>
@@ -135,11 +143,19 @@ export function AddFurniture() {
           onChange={(e) => setDepth(Number(e.target.value))} />
       </div>
 
-      {(template === 'cabinet' || template === 'bookshelf') && (
+      {(template === 'cabinet' || template === 'bookshelf' || template === 'door-cabinet') && (
         <div className="form-row">
           <label>Shelves</label>
           <input type="number" value={shelves} min={0} max={20}
             onChange={(e) => setShelves(Number(e.target.value))} />
+        </div>
+      )}
+
+      {template === 'door-cabinet' && (
+        <div className="form-row">
+          <label>Doors</label>
+          <input type="number" value={doors} min={1} max={2}
+            onChange={(e) => setDoors(Number(e.target.value))} />
         </div>
       )}
 
@@ -163,7 +179,7 @@ export function AddFurniture() {
       )}
 
       <button className="btn-primary" onClick={handleAdd}>
-        + Add {template}
+        + Add {template === 'door-cabinet' ? 'Door Cabinet' : template}
       </button>
     </div>
   );

@@ -84,8 +84,8 @@ export interface FurniturePiece {
   rotation: Vec3;
   components: Component[];
   locked: boolean;
-  templateType?: 'cabinet' | 'bookshelf' | 'desk' | 'dresser';
-  templateParams?: CabinetParams | BookshelfParams | DeskParams | DresserParams;
+  templateType?: 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'door-cabinet';
+  templateParams?: CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams;
   constraints?: ParametricConstraint[];
 }
 
@@ -160,5 +160,14 @@ export interface DresserParams {
   height: number;
   depth: number;
   drawerRows: number;
+  materialId: string;
+}
+
+export interface DoorCabinetParams {
+  width: number;
+  height: number;
+  depth: number;
+  shelves: number;
+  doors: number; // 1 or 2
   materialId: string;
 }

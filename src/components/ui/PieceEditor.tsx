@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import type {
   Component, Panel, Leg, Vec3, FurniturePiece,
-  CabinetParams, BookshelfParams, DeskParams, DresserParams,
+  CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
 } from '../../types';
 
 export function PieceEditor() {
@@ -175,7 +175,7 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
   const handleRegenerate = () => {
     regeneratePiece(
       piece.id,
-      params as unknown as CabinetParams | BookshelfParams | DeskParams | DresserParams
+      params as unknown as CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams
     );
   };
 
@@ -198,7 +198,7 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
           onChange={(e) => updateParam('depth', Number(e.target.value))} />
       </div>
 
-      {(piece.templateType === 'cabinet' || piece.templateType === 'bookshelf') && (
+      {(piece.templateType === 'cabinet' || piece.templateType === 'bookshelf' || piece.templateType === 'door-cabinet') && (
         <div className="form-row">
           <label>Shelves</label>
           <input type="number" value={params.shelves as number} min={0} max={20}
@@ -210,6 +210,14 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
         <div className="form-row">
           <label>Doors</label>
           <input type="number" value={(params.doors as number) ?? 1} min={0} max={2}
+            onChange={(e) => updateParam('doors', Number(e.target.value))} />
+        </div>
+      )}
+
+      {piece.templateType === 'door-cabinet' && (
+        <div className="form-row">
+          <label>Doors</label>
+          <input type="number" value={(params.doors as number) ?? 1} min={1} max={2}
             onChange={(e) => updateParam('doors', Number(e.target.value))} />
         </div>
       )}

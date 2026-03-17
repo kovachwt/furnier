@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import type {
-  FurniturePiece, Panel, Leg, DrawerSlide, Vec3, Material,
-  CabinetParams, BookshelfParams, DeskParams, DresserParams
+  FurniturePiece, Panel, Leg, Hinge, DrawerSlide, Vec3, Material,
+  CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams
 } from '../types';
 
 function makePanel(
@@ -288,6 +288,158 @@ export function createDresser(params: DresserParams, materials: Material[]): Fur
   return {
     id: uuid(),
     name: 'Dresser',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components,
+    locked: false,
+  };
+}
+
+export function createDoorCabinet(params: DoorCabinetParams, materials: Material[]): FurniturePiece {
+  const mat = materials.find(m => m.id === params.materialId);
+  const t = mat?.thickness ?? 18;
+  const { width, height, depth } = params;
+  const innerW = width - 2 * t;
+  const innerH = height - 2 * t;
+  const doorCount = Math.max(1, Math.min(2, params.doors));
+  const components: (Panel | Hinge)[] = [];
+
+  // Left side
+  components.push(makePanel('Left Side', depth, height, params.materialId, t,
+    [-(width / 2) + t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: false, right: true }
+  ));
+
+  // Right side
+  components.push(makePanel('Right Side', depth, height, params.materialId, t,
+    [(width / 2) - t / 2, height / 2, 0],
+    [0, Math.PI / 2, 0],
+    { top: false, bottom: false, left: true, right: false }
+  ));
+
+  // Top
+  components.push(makePanel('Top', innerW, depth, params.materialId, t,
+    [0, height - t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: false, right: false }
+  ));
+
+  // Bottom
+  components.push(makePanel('Bottom', innerW, depth, params.materialId, t,
+    [0, t / 2, 0],
+    [Math.PI / 2, 0, 0],
+    { top: false, bottom: false, left: false, right: false }
+  ));
+
+  // Back panel (thinner material)
+  components.push(makePanel('Back', innerW, innerH, 'hardboard-3', 3,
+    [0, height / 2, -(depth / 2) + 1.5],
+    [0, 0, 0],
+  ));
+
+  // Shelves
+  if (params.shelves > 0) {
+    const spacing = innerH / (params.shelves + 1);
+    for (let i = 1; i <= params.shelves; i++) {
+      components.push(makePanel(`Shelf ${i}`, innerW, depth - t, params.materialId, t,
+        [0, t + spacing * i, t / 2],
+        [Math.PI / 2, 0, 0],
+        { top: false, bottom: false, left: false, right: true }
+      ));
+    }
+  }
+
+  // Doors & hinges
+  const hingeInset = 100; // mm from top/bottom edge of door
+  const hingeZ = depth / 2 - t;
+
+  if (doorCount === 1) {
+    // Single door covering the full opening
+    components.push(makePanel('Door', innerW, innerH, params.materialId, t,
+      [0, height / 2, depth / 2 - t / 2],
+      [0, 0, 0],
+      { top: true, bottom: true, left: true, right: true }
+    ));
+
+    // Hinges on the left side
+    const hingeX = -(innerW / 2) + 17;
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Top Hinge',
+      hingeType: 'concealed',
+      position: [hingeX, height - t - hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Bottom Hinge',
+      hingeType: 'concealed',
+      position: [hingeX, t + hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+  } else {
+    // Two doors, each covering half the opening
+    const doorW = innerW / 2 - 1; // 1mm gap between doors
+
+    // Left door
+    components.push(makePanel('Left Door', doorW, innerH, params.materialId, t,
+      [-(doorW / 2 + 1), height / 2, depth / 2 - t / 2],
+      [0, 0, 0],
+      { top: true, bottom: true, left: true, right: true }
+    ));
+
+    // Right door
+    components.push(makePanel('Right Door', doorW, innerH, params.materialId, t,
+      [(doorW / 2 + 1), height / 2, depth / 2 - t / 2],
+      [0, 0, 0],
+      { top: true, bottom: true, left: true, right: true }
+    ));
+
+    // Left door hinges (on the outer left)
+    const leftHingeX = -(innerW / 2) + 17;
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Left Top Hinge',
+      hingeType: 'concealed',
+      position: [leftHingeX, height - t - hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Left Bottom Hinge',
+      hingeType: 'concealed',
+      position: [leftHingeX, t + hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+
+    // Right door hinges (on the outer right)
+    const rightHingeX = (innerW / 2) - 17;
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Right Top Hinge',
+      hingeType: 'concealed',
+      position: [rightHingeX, height - t - hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+    components.push({
+      id: uuid(),
+      type: 'hinge',
+      name: 'Right Bottom Hinge',
+      hingeType: 'concealed',
+      position: [rightHingeX, t + hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+  }
+
+  return {
+    id: uuid(),
+    name: 'Door Cabinet',
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     components,

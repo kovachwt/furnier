@@ -4,10 +4,10 @@ import { produce } from 'immer';
 import { v4 as uuid } from 'uuid';
 import type {
   Project, Room, FurniturePiece, Component, Material, Tool,
-  ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams,
+  ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
 } from '../types';
 import type { SnapLine } from '../utils/snap';
-import { createCabinet, createBookshelf, createDesk, createDresser } from '../utils/templates';
+import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet } from '../utils/templates';
 
 const DEFAULT_MATERIALS: Material[] = [
   // --- Melamine-faced chipboard (European standard 2800×2070) ---
@@ -280,7 +280,7 @@ interface AppState {
   removePiece: (id: string) => void;
   updatePiece: (id: string, updates: Partial<FurniturePiece>) => void;
   duplicatePiece: (id: string) => string | null;
-  regeneratePiece: (id: string, params: CabinetParams | BookshelfParams | DeskParams | DresserParams) => void;
+  regeneratePiece: (id: string, params: CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams) => void;
 
   // Components
   addComponent: (pieceId: string, component: Omit<Component, 'id'>) => string | null;
@@ -424,6 +424,9 @@ export const useStore = create<AppState>()(
           break;
         case 'dresser':
           newPiece = createDresser(params as DresserParams, materials);
+          break;
+        case 'door-cabinet':
+          newPiece = createDoorCabinet(params as DoorCabinetParams, materials);
           break;
         default:
           return;
