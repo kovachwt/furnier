@@ -299,6 +299,13 @@ interface AppState {
   // Selection
   setSelection: (pieceId: string | null, componentId?: string | null) => void;
   clearSelection: () => void;
+  selectNextPiece: () => void;
+  selectPrevPiece: () => void;
+  selectNextComponent: () => void;
+  selectPrevComponent: () => void;
+
+  // Movement
+  nudgeSelectedPiece: (dx: number, dy: number, dz: number) => void;
 
   // Tools & toggles
   setActiveTool: (tool: Tool) => void;
@@ -561,6 +568,78 @@ export const useStore = create<AppState>()(
 
     clearSelection: () =>
       set({ selectedPieceId: null, selectedComponentId: null }),
+
+    selectNextPiece: () => {
+      const { project, selectedPieceId } = get();
+      const pieces = project.pieces;
+      if (pieces.length === 0) return;
+      if (!selectedPieceId) {
+        set({ selectedPieceId: pieces[0].id, selectedComponentId: null });
+        return;
+      }
+      const idx = pieces.findIndex((p) => p.id === selectedPieceId);
+      const next = (idx + 1) % pieces.length;
+      set({ selectedPieceId: pieces[next].id, selectedComponentId: null });
+    },
+
+    selectPrevPiece: () => {
+      const { project, selectedPieceId } = get();
+      const pieces = project.pieces;
+      if (pieces.length === 0) return;
+      if (!selectedPieceId) {
+        set({ selectedPieceId: pieces[pieces.length - 1].id, selectedComponentId: null });
+        return;
+      }
+      const idx = pieces.findIndex((p) => p.id === selectedPieceId);
+      const prev = (idx - 1 + pieces.length) % pieces.length;
+      set({ selectedPieceId: pieces[prev].id, selectedComponentId: null });
+    },
+
+    selectNextComponent: () => {
+      const { selectedPieceId, selectedComponentId, project } = get();
+      if (!selectedPieceId) return;
+      const piece = project.pieces.find((p) => p.id === selectedPieceId);
+      if (!piece || piece.components.length === 0) return;
+      if (!selectedComponentId) {
+        set({ selectedComponentId: piece.components[0].id });
+        return;
+      }
+      const idx = piece.components.findIndex((c) => c.id === selectedComponentId);
+      const next = (idx + 1) % piece.components.length;
+      set({ selectedComponentId: piece.components[next].id });
+    },
+
+    selectPrevComponent: () => {
+      const { selectedPieceId, selectedComponentId, project } = get();
+      if (!selectedPieceId) return;
+      const piece = project.pieces.find((p) => p.id === selectedPieceId);
+      if (!piece || piece.components.length === 0) return;
+      if (!selectedComponentId) {
+        set({ selectedComponentId: piece.components[piece.components.length - 1].id });
+        return;
+      }
+      const idx = piece.components.findIndex((c) => c.id === selectedComponentId);
+      const prev = (idx - 1 + piece.components.length) % piece.components.length;
+      set({ selectedComponentId: piece.components[prev].id });
+    },
+
+    nudgeSelectedPiece: (dx, dy, dz) => {
+      const { selectedPieceId, project } = get();
+      if (!selectedPieceId) return;
+      const piece = project.pieces.find((p) => p.id === selectedPieceId);
+      if (!piece || piece.locked) return;
+      set(produce((s: AppState) => {
+        const p = s.project.pieces.find((p) => p.id === selectedPieceId);
+        if (p) {
+          p.position = [
+            p.position[0] + dx,
+            Math.max(0, p.position[1] + dy),
+            p.position[2] + dz,
+          ];
+        }
+      }));
+      get().pushHistory();
+    },
 
     setActiveTool: (tool) => set({ activeTool: tool }),
     setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),

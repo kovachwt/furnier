@@ -1,9 +1,9 @@
 import { useStore } from '../../store/useStore';
 import type { Tool } from '../../types';
 
-const tools: { id: Tool; label: string; icon: string }[] = [
-  { id: 'select', label: 'Select', icon: '⇱' },
-  { id: 'move', label: 'Move', icon: '✥' },
+const tools: { id: Tool; label: string; icon: string; shortcut: string }[] = [
+  { id: 'select', label: 'Select', icon: '⇱', shortcut: 'S' },
+  { id: 'move', label: 'Move', icon: '✥', shortcut: 'W' },
 ];
 
 export function Toolbar() {
@@ -32,7 +32,7 @@ export function Toolbar() {
             key={t.id}
             className={`tool-btn ${activeTool === t.id ? 'active' : ''}`}
             onClick={() => setActiveTool(t.id)}
-            title={t.label}
+            title={`${t.label} (${t.shortcut})`}
           >
             <span className="tool-icon">{t.icon}</span>
             <span className="tool-label">{t.label}</span>
@@ -53,28 +53,28 @@ export function Toolbar() {
         <button
           className={`tool-btn ${snapEnabled ? 'active' : ''}`}
           onClick={() => setSnapEnabled(!snapEnabled)}
-          title="Snap to grid"
+          title="Snap to grid (N)"
         >
           ⊞ Grid
         </button>
         <button
           className={`tool-btn ${snapToFaces ? 'active' : ''}`}
           onClick={() => setSnapToFaces(!snapToFaces)}
-          title="Snap to panel faces"
+          title="Snap to panel faces (F)"
         >
           ⊟ Faces
         </button>
         <button
           className={`tool-btn ${showGrid ? 'active' : ''}`}
           onClick={() => setShowGrid(!showGrid)}
-          title="Show grid"
+          title="Show grid (G)"
         >
           # Grid
         </button>
         <button
           className={`tool-btn ${showDimensions ? 'active' : ''}`}
           onClick={() => setShowDimensions(!showDimensions)}
-          title="Show dimensions"
+          title="Show dimensions (D)"
         >
           ↔ Dims
         </button>
@@ -86,7 +86,7 @@ export function Toolbar() {
         <button
           className={`tool-btn ${explodedView ? 'active' : ''}`}
           onClick={() => setExplodedView(!explodedView)}
-          title="Exploded assembly view"
+          title="Exploded assembly view (X)"
         >
           💥 Explode
         </button>

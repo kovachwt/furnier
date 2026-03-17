@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Scene } from './components/Scene';
 import { Toolbar } from './components/ui/Toolbar';
 import { RoomSettings } from './components/ui/RoomSettings';
@@ -8,10 +8,12 @@ import { PieceEditor } from './components/ui/PieceEditor';
 import { ProjectActions } from './components/ui/ProjectActions';
 import { CutListView } from './components/cutlist/CutListView';
 import { ShareDialog } from './components/ui/ShareDialog';
+import { KeyboardShortcuts } from './components/ui/KeyboardShortcuts';
 import { useStore } from './store/useStore';
 
 export default function App() {
   const [showCutList, setShowCutList] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'add' | 'edit'>('add');
   const selectedPieceId = useStore((s) => s.selectedPieceId);
 
@@ -20,28 +22,93 @@ export default function App() {
     if (selectedPieceId) setSidebarTab('edit');
   }, [selectedPieceId]);
 
+  const toggleShortcuts = useCallback(() => setShowShortcuts((v) => !v), []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ignore shortcuts when typing in inputs/textareas/selects
+      const tag = (e.target as HTMLElement).tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      // Ctrl/Cmd combos always work
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') { e.preventDefault(); useStore.getState().undo(); }
-        if (e.key === 'y') { e.preventDefault(); useStore.getState().redo(); }
+        if (e.key === 'z') { e.preventDefault(); useStore.getState().undo(); return; }
+        if (e.key === 'y') { e.preventDefault(); useStore.getState().redo(); return; }
+        if (e.key === 'd') {
+          e.preventDefault();
+          const s = useStore.getState();
+          if (s.selectedPieceId) s.duplicatePiece(s.selectedPieceId);
+          return;
+        }
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+
+      // Delete/Backspace — only when not in an input
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
         const state = useStore.getState();
         if (state.selectedComponentId && state.selectedPieceId) {
           state.removeComponent(state.selectedPieceId, state.selectedComponentId);
         } else if (state.selectedPieceId) {
           state.removePiece(state.selectedPieceId);
         }
+        return;
       }
+
+      // Everything below is blocked when typing in inputs
+      if (isInput) return;
+
+      const state = useStore.getState();
+
+      // --- Help ---
+      if (e.key === '?') { setShowShortcuts((v) => !v); return; }
+
+      // --- Escape: component → piece → deselect ---
       if (e.key === 'Escape') {
-        useStore.getState().clearSelection();
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (state.selectedComponentId) {
+          useStore.getState().setSelection(state.selectedPieceId);
+        } else {
+          useStore.getState().clearSelection();
+        }
+        return;
       }
+
+      // --- Tab: cycle pieces ---
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) { state.selectPrevPiece(); } else { state.selectNextPiece(); }
+        return;
+      }
+
+      // --- Enter: drill into / cycle components ---
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!state.selectedPieceId) return;
+        if (e.shiftKey) { state.selectPrevComponent(); } else { state.selectNextComponent(); }
+        return;
+      }
+
+      // --- Arrow keys: nudge selected piece ---
+      const nudgeAmount = e.shiftKey ? 1 : state.gridSize;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); state.nudgeSelectedPiece(-nudgeAmount, 0, 0); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); state.nudgeSelectedPiece(nudgeAmount, 0, 0); return; }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); state.nudgeSelectedPiece(0, 0, -nudgeAmount); return; }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); state.nudgeSelectedPiece(0, 0, nudgeAmount); return; }
+      if (e.key === 'PageUp')     { e.preventDefault(); state.nudgeSelectedPiece(0, nudgeAmount, 0); return; }
+      if (e.key === 'PageDown')   { e.preventDefault(); state.nudgeSelectedPiece(0, -nudgeAmount, 0); return; }
+
+      // --- Tool & toggle shortcuts (single keys) ---
+      if (e.key === 's') { state.setActiveTool('select'); return; }
+      if (e.key === 'w') { state.setActiveTool('move'); return; }
+      if (e.key === 'g') { state.setShowGrid(!state.showGrid); return; }
+      if (e.key === 'n') { state.setSnapEnabled(!state.snapEnabled); return; }
+      if (e.key === 'f') { state.setSnapToFaces(!state.snapToFaces); return; }
+      if (e.key === 'd') { state.setShowDimensions(!state.showDimensions); return; }
+      if (e.key === 'x') { state.setExplodedView(!state.explodedView); return; }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [showShortcuts]);
 
   return (
     <div className="app">
@@ -95,7 +162,16 @@ export default function App() {
       </div>
 
       {showCutList && <CutListView onClose={() => setShowCutList(false)} />}
+      {showShortcuts && <KeyboardShortcuts onClose={toggleShortcuts} />}
       <ShareDialog />
+
+      <button
+        className="shortcuts-hint-btn"
+        onClick={toggleShortcuts}
+        title="Keyboard shortcuts (?)"
+      >
+        ⌨
+      </button>
     </div>
   );
 }
