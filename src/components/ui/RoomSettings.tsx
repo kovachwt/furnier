@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { RoomMeasure } from './RoomMeasure';
 
 export function RoomSettings() {
   const room = useStore((s) => s.project.room);
   const setRoom = useStore((s) => s.setRoom);
+  const [showMeasure, setShowMeasure] = useState(false);
 
   return (
     <div className="panel-section">
@@ -40,6 +43,14 @@ export function RoomSettings() {
           onChange={(e) => setRoom({ height: Number(e.target.value) })}
         />
       </div>
+      <button
+        className="btn-secondary full-width"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowMeasure(true)}
+      >
+        📷 Measure from Photo
+      </button>
+      {showMeasure && <RoomMeasure onClose={() => setShowMeasure(false)} />}
     </div>
   );
 }
