@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet } from '../../utils/templates';
+import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet, createFixtureBox, createFixtureCylinder } from '../../utils/templates';
 import { v4 as uuid } from 'uuid';
-import type { Panel, Vec3 } from '../../types';
+import type { Panel, Vec3, FixtureBoxParams, FixtureCylinderParams } from '../../types';
 
-type TemplateType = 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'door-cabinet' | 'panel';
+type TemplateType = 'cabinet' | 'bookshelf' | 'desk' | 'dresser' | 'door-cabinet' | 'panel'
+  | 'fixture-pillar' | 'fixture-pillar-round' | 'fixture-radiator' | 'fixture-appliance' | 'fixture-box' | 'fixture-cylinder';
 
 export function AddFurniture() {
   const addPiece = useStore((s) => s.addPiece);
@@ -24,7 +25,62 @@ export function AddFurniture() {
   const [drawerRows, setDrawerRows] = useState(4);
   const [legStyle, setLegStyle] = useState<'round' | 'tapered' | 'square'>('round');
 
+  // Fixture state
+  const [fixtureColor, setFixtureColor] = useState('#808080');
+  const [diameter, setDiameter] = useState(300);
+
+  const isFixture = template.startsWith('fixture-');
+  const isCylinder = template === 'fixture-pillar-round' || template === 'fixture-cylinder';
+
+  const handleTemplateChange = (newTemplate: TemplateType) => {
+    setTemplate(newTemplate);
+    switch (newTemplate) {
+      case 'fixture-pillar':
+        setWidth(300); setHeight(2500); setDepth(300); setFixtureColor('#808080'); break;
+      case 'fixture-pillar-round':
+        setDiameter(300); setHeight(2500); setFixtureColor('#808080'); break;
+      case 'fixture-radiator':
+        setWidth(1000); setHeight(600); setDepth(100); setFixtureColor('#c0c0c0'); break;
+      case 'fixture-appliance':
+        setWidth(600); setHeight(850); setDepth(600); setFixtureColor('#e8e8e8'); break;
+      case 'fixture-box':
+        setWidth(500); setHeight(500); setDepth(500); setFixtureColor('#9e9e9e'); break;
+      case 'fixture-cylinder':
+        setDiameter(200); setHeight(1000); setFixtureColor('#9e9e9e'); break;
+    }
+  };
+
   const handleAdd = () => {
+    // Handle fixture creation
+    if (isFixture) {
+      let piece;
+      if (isCylinder) {
+        const params: FixtureCylinderParams = { diameter, height };
+        piece = createFixtureCylinder(params, fixtureColor);
+        piece.templateType = 'fixture-cylinder';
+        piece.templateParams = { ...params };
+      } else {
+        const params: FixtureBoxParams = { width, height, depth };
+        piece = createFixtureBox(params, fixtureColor);
+        piece.templateType = 'fixture-box';
+        piece.templateParams = { ...params };
+      }
+      // Set name based on preset
+      const names: Record<string, string> = {
+        'fixture-pillar': 'Pillar',
+        'fixture-pillar-round': 'Pillar (round)',
+        'fixture-radiator': 'Radiator',
+        'fixture-appliance': 'Appliance',
+        'fixture-box': 'Fixture',
+        'fixture-cylinder': 'Fixture (cylinder)',
+      };
+      piece.name = names[template] ?? 'Fixture';
+      piece.position = [0, 0, 0];
+      const id = addPiece(piece);
+      setSelection(id);
+      return;
+    }
+
     let piece;
     switch (template) {
       case 'cabinet': {
@@ -100,34 +156,61 @@ export function AddFurniture() {
 
   return (
     <div className="panel-section">
-      <h3>Add Furniture</h3>
+      <h3>{isFixture ? '📌 Add Fixture' : 'Add Furniture'}</h3>
 
       <div className="form-row">
         <label>Type</label>
-        <select value={template} onChange={(e) => setTemplate(e.target.value as TemplateType)}>
-          <option value="cabinet">Cabinet (open)</option>
-          <option value="door-cabinet">Cabinet (with doors)</option>
-          <option value="bookshelf">Bookshelf</option>
-          <option value="desk">Desk</option>
-          <option value="dresser">Dresser</option>
-          <option value="panel">Single Panel</option>
+        <select value={template} onChange={(e) => handleTemplateChange(e.target.value as TemplateType)}>
+          <optgroup label="Furniture">
+            <option value="cabinet">Cabinet (open)</option>
+            <option value="door-cabinet">Cabinet (with doors)</option>
+            <option value="bookshelf">Bookshelf</option>
+            <option value="desk">Desk</option>
+            <option value="dresser">Dresser</option>
+            <option value="panel">Single Panel</option>
+          </optgroup>
+          <optgroup label="Room Fixtures">
+            <option value="fixture-pillar">Pillar (rectangular)</option>
+            <option value="fixture-pillar-round">Pillar (round)</option>
+            <option value="fixture-radiator">Radiator / Fancoil</option>
+            <option value="fixture-appliance">Appliance</option>
+            <option value="fixture-box">Generic Box</option>
+            <option value="fixture-cylinder">Generic Cylinder</option>
+          </optgroup>
         </select>
       </div>
 
-      <div className="form-row">
-        <label>Material</label>
-        <select value={matId} onChange={(e) => setMatId(e.target.value)}>
-          {materials.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
-      </div>
+      {!isFixture && (
+        <div className="form-row">
+          <label>Material</label>
+          <select value={matId} onChange={(e) => setMatId(e.target.value)}>
+            {materials.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      <div className="form-row">
-        <label>Width (mm)</label>
-        <input type="number" value={width} step={10} min={100} max={3000}
-          onChange={(e) => setWidth(Number(e.target.value))} />
-      </div>
+      {isFixture && (
+        <div className="form-row">
+          <label>Color</label>
+          <input type="color" value={fixtureColor} onChange={(e) => setFixtureColor(e.target.value)} />
+        </div>
+      )}
+
+      {isCylinder ? (
+        <div className="form-row">
+          <label>Diameter (mm)</label>
+          <input type="number" value={diameter} step={10} min={10} max={3000}
+            onChange={(e) => setDiameter(Number(e.target.value))} />
+        </div>
+      ) : (
+        <div className="form-row">
+          <label>Width (mm)</label>
+          <input type="number" value={width} step={10} min={100} max={3000}
+            onChange={(e) => setWidth(Number(e.target.value))} />
+        </div>
+      )}
 
       {template !== 'desk' && (
         <div className="form-row">
@@ -137,13 +220,15 @@ export function AddFurniture() {
         </div>
       )}
 
-      <div className="form-row">
-        <label>Depth (mm)</label>
-        <input type="number" value={depth} step={10} min={100} max={1500}
-          onChange={(e) => setDepth(Number(e.target.value))} />
-      </div>
+      {!isCylinder && (
+        <div className="form-row">
+          <label>Depth (mm)</label>
+          <input type="number" value={depth} step={10} min={10} max={1500}
+            onChange={(e) => setDepth(Number(e.target.value))} />
+        </div>
+      )}
 
-      {(template === 'cabinet' || template === 'bookshelf' || template === 'door-cabinet') && (
+      {!isFixture && (template === 'cabinet' || template === 'bookshelf' || template === 'door-cabinet') && (
         <div className="form-row">
           <label>Shelves</label>
           <input type="number" value={shelves} min={0} max={20}
@@ -179,7 +264,7 @@ export function AddFurniture() {
       )}
 
       <button className="btn-primary" onClick={handleAdd}>
-        + Add {template === 'door-cabinet' ? 'Door Cabinet' : template}
+        {isFixture ? '📌 Add Fixture' : `+ Add ${template === 'door-cabinet' ? 'Door Cabinet' : template}`}
       </button>
     </div>
   );

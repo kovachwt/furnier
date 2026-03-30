@@ -306,6 +306,8 @@ export function FurniturePieceMesh({ piece }: Props) {
                 pieceId={piece.id}
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
+                isFixture={piece.isFixture}
+                fixtureColor={piece.fixtureColor}
               />
             )}
             {comp.type === 'leg' && (
@@ -314,6 +316,8 @@ export function FurniturePieceMesh({ piece }: Props) {
                 pieceId={piece.id}
                 isSelected={isCompSelected}
                 isPieceSelected={isSelected}
+                isFixture={piece.isFixture}
+                fixtureColor={piece.fixtureColor}
               />
             )}
             {(comp.type === 'hinge' || comp.type === 'drawer-slide' || comp.type === 'shelf-pin') && (

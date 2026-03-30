@@ -340,6 +340,16 @@ html, body, #root {
   color: var(--text-primary);
 }
 
+.fixture-badge {
+  background: #ff880030;
+  border: 1px solid #ff8800;
+  color: #ffaa44;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
 .comp-editor {
   margin-top: 12px;
   padding-top: 12px;

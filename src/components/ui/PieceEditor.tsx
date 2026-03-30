@@ -3,6 +3,7 @@ import { useStore } from '../../store/useStore';
 import type {
   Component, Panel, Leg, Vec3, FurniturePiece,
   CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
+  FixtureBoxParams, FixtureCylinderParams,
 } from '../../types';
 
 export function PieceEditor() {
@@ -64,7 +65,10 @@ export function PieceEditor() {
 
   return (
     <div className="panel-section">
-      <h3>Selected: {piece.name}</h3>
+      <h3>{piece.isFixture ? '📌 ' : ''}Selected: {piece.name}</h3>
+      {piece.isFixture && (
+        <div className="fixture-badge">Room Fixture — excluded from cut list &amp; BOM</div>
+      )}
 
       <div className="form-row">
         <label>Name</label>
@@ -74,6 +78,17 @@ export function PieceEditor() {
           onChange={(e) => updatePiece(piece.id, { name: e.target.value })}
         />
       </div>
+
+      {piece.isFixture && (
+        <div className="form-row">
+          <label>Color</label>
+          <input
+            type="color"
+            value={piece.fixtureColor ?? '#808080'}
+            onChange={(e) => { updatePiece(piece.id, { fixtureColor: e.target.value }); }}
+          />
+        </div>
+      )}
 
       <div className="form-row">
         <label>X (mm)</label>
@@ -109,10 +124,12 @@ export function PieceEditor() {
         </button>
       </div>
 
-      <div className="btn-row" style={{ marginTop: 8 }}>
-        <button className="btn-secondary" onClick={handleAddPanel}>+ Panel</button>
-        <button className="btn-secondary" onClick={handleAddLeg}>+ Leg</button>
-      </div>
+      {!piece.isFixture && (
+        <div className="btn-row" style={{ marginTop: 8 }}>
+          <button className="btn-secondary" onClick={handleAddPanel}>+ Panel</button>
+          <button className="btn-secondary" onClick={handleAddLeg}>+ Leg</button>
+        </div>
+      )}
 
       {/* Template re-parameterization */}
       {piece.templateType && piece.templateParams && (
@@ -143,11 +160,12 @@ export function PieceEditor() {
           updateComponent={updateComponent}
           removeComponent={removeComponent}
           pushHistory={pushHistory}
+          isFixture={piece.isFixture}
         />
       )}
 
-      {/* Constraints */}
-      <ConstraintSection piece={piece} />
+      {/* Constraints — not shown for fixtures */}
+      {!piece.isFixture && <ConstraintSection piece={piece} />}
     </div>
   );
 }
@@ -172,31 +190,76 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
     setParams(p => ({ ...p, [key]: value }));
   };
 
+  const isFixtureTemplate = piece.templateType === 'fixture-box' || piece.templateType === 'fixture-cylinder';
+
   const handleRegenerate = () => {
     regeneratePiece(
       piece.id,
-      params as unknown as CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams
+      params as unknown as CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams | FixtureBoxParams | FixtureCylinderParams
     );
   };
 
   return (
     <div className="template-params-section">
       <h4>↻ Template: {piece.templateType}</h4>
-      <div className="form-row">
-        <label>Width</label>
-        <input type="number" value={params.width as number} step={10} min={100}
-          onChange={(e) => updateParam('width', Number(e.target.value))} />
-      </div>
-      <div className="form-row">
-        <label>Height</label>
-        <input type="number" value={params.height as number} step={10} min={100}
-          onChange={(e) => updateParam('height', Number(e.target.value))} />
-      </div>
-      <div className="form-row">
-        <label>Depth</label>
-        <input type="number" value={params.depth as number} step={10} min={100}
-          onChange={(e) => updateParam('depth', Number(e.target.value))} />
-      </div>
+
+      {/* Fixture cylinder: diameter + height */}
+      {piece.templateType === 'fixture-cylinder' && (
+        <>
+          <div className="form-row">
+            <label>Diameter</label>
+            <input type="number" value={params.diameter as number} step={10} min={10}
+              onChange={(e) => updateParam('diameter', Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>Height</label>
+            <input type="number" value={params.height as number} step={10} min={10}
+              onChange={(e) => updateParam('height', Number(e.target.value))} />
+          </div>
+        </>
+      )}
+
+      {/* Fixture box: width + height + depth */}
+      {piece.templateType === 'fixture-box' && (
+        <>
+          <div className="form-row">
+            <label>Width</label>
+            <input type="number" value={params.width as number} step={10} min={10}
+              onChange={(e) => updateParam('width', Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>Height</label>
+            <input type="number" value={params.height as number} step={10} min={10}
+              onChange={(e) => updateParam('height', Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>Depth</label>
+            <input type="number" value={params.depth as number} step={10} min={10}
+              onChange={(e) => updateParam('depth', Number(e.target.value))} />
+          </div>
+        </>
+      )}
+
+      {/* Furniture templates: width + height + depth */}
+      {!isFixtureTemplate && (
+        <>
+          <div className="form-row">
+            <label>Width</label>
+            <input type="number" value={params.width as number} step={10} min={100}
+              onChange={(e) => updateParam('width', Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>Height</label>
+            <input type="number" value={params.height as number} step={10} min={100}
+              onChange={(e) => updateParam('height', Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>Depth</label>
+            <input type="number" value={params.depth as number} step={10} min={100}
+              onChange={(e) => updateParam('depth', Number(e.target.value))} />
+          </div>
+        </>
+      )}
 
       {(piece.templateType === 'cabinet' || piece.templateType === 'bookshelf' || piece.templateType === 'door-cabinet') && (
         <div className="form-row">
@@ -242,15 +305,17 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
         </div>
       )}
 
-      <div className="form-row">
-        <label>Material</label>
-        <select value={params.materialId as string}
-          onChange={(e) => updateParam('materialId', e.target.value)}>
-          {materials.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
-      </div>
+      {!isFixtureTemplate && (
+        <div className="form-row">
+          <label>Material</label>
+          <select value={params.materialId as string}
+            onChange={(e) => updateParam('materialId', e.target.value)}>
+            {materials.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <button className="btn-primary full-width" onClick={handleRegenerate}
         style={{ marginTop: 6 }}>
@@ -381,6 +446,7 @@ function ComponentEditor({
   updateComponent,
   removeComponent,
   pushHistory,
+  isFixture,
 }: {
   pieceId: string;
   component: Component;
@@ -388,6 +454,7 @@ function ComponentEditor({
   updateComponent: (pid: string, cid: string, u: Partial<Component>) => void;
   removeComponent: (pid: string, cid: string) => void;
   pushHistory: () => void;
+  isFixture?: boolean;
 }) {
   const update = (updates: Partial<Component>) => {
     updateComponent(pieceId, component.id, updates);
@@ -441,40 +508,51 @@ function ComponentEditor({
             <input type="number" value={component.height} step={5} min={10}
               onChange={(e) => { update({ height: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
           </div>
-          <div className="form-row">
-            <label>Material</label>
-            <select
-              value={component.materialId}
-              onChange={(e) => {
-                const mat = materials.find((m) => m.id === e.target.value);
-                update({ materialId: e.target.value, depth: mat?.thickness ?? component.depth } as Partial<Component>);
-                pushHistory();
-              }}
-            >
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-row">
-            <label>Edge Banding</label>
-            <div className="edge-banding">
-              {(['top', 'bottom', 'left', 'right'] as const).map((edge) => (
-                <label key={edge} className="cb-label">
-                  <input
-                    type="checkbox"
-                    checked={component.edgeBanding[edge]}
-                    onChange={(e) => {
-                      update({
-                        edgeBanding: { ...component.edgeBanding, [edge]: e.target.checked },
-                      } as Partial<Component>);
-                    }}
-                  />
-                  {edge}
-                </label>
-              ))}
+          {isFixture && (
+            <div className="form-row">
+              <label>Depth</label>
+              <input type="number" value={component.depth} step={5} min={10}
+                onChange={(e) => { update({ depth: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
             </div>
-          </div>
+          )}
+          {!isFixture && (
+            <>
+              <div className="form-row">
+                <label>Material</label>
+                <select
+                  value={component.materialId}
+                  onChange={(e) => {
+                    const mat = materials.find((m) => m.id === e.target.value);
+                    update({ materialId: e.target.value, depth: mat?.thickness ?? component.depth } as Partial<Component>);
+                    pushHistory();
+                  }}
+                >
+                  {materials.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <label>Edge Banding</label>
+                <div className="edge-banding">
+                  {(['top', 'bottom', 'left', 'right'] as const).map((edge) => (
+                    <label key={edge} className="cb-label">
+                      <input
+                        type="checkbox"
+                        checked={component.edgeBanding[edge]}
+                        onChange={(e) => {
+                          update({
+                            edgeBanding: { ...component.edgeBanding, [edge]: e.target.checked },
+                          } as Partial<Component>);
+                        }}
+                      />
+                      {edge}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 

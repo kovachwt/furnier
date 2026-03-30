@@ -17,7 +17,7 @@ export function PieceList() {
             className={`piece-item ${piece.id === selectedPieceId ? 'selected' : ''}`}
             onClick={() => setSelection(piece.id)}
           >
-            <span>{piece.locked ? '🔒 ' : ''}{piece.name}</span>
+            <span>{piece.isFixture ? '📌 ' : ''}{piece.locked ? '🔒 ' : ''}{piece.name}</span>
             <span className="piece-comp-count">{piece.components.length} parts</span>
           </div>
         ))}

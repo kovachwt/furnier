@@ -5,9 +5,10 @@ import { v4 as uuid } from 'uuid';
 import type {
   Project, Room, FurniturePiece, Component, Material, Tool,
   ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
+  FixtureBoxParams, FixtureCylinderParams,
 } from '../types';
 import type { SnapLine } from '../utils/snap';
-import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet } from '../utils/templates';
+import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet, createFixtureBox, createFixtureCylinder } from '../utils/templates';
 
 const DEFAULT_MATERIALS: Material[] = [
   // --- Melamine-faced chipboard (European standard 2800×2070) ---
@@ -280,7 +281,7 @@ interface AppState {
   removePiece: (id: string) => void;
   updatePiece: (id: string, updates: Partial<FurniturePiece>) => void;
   duplicatePiece: (id: string) => string | null;
-  regeneratePiece: (id: string, params: CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams) => void;
+  regeneratePiece: (id: string, params: CabinetParams | BookshelfParams | DeskParams | DresserParams | DoorCabinetParams | FixtureBoxParams | FixtureCylinderParams) => void;
 
   // Components
   addComponent: (pieceId: string, component: Omit<Component, 'id'>) => string | null;
@@ -435,6 +436,12 @@ export const useStore = create<AppState>()(
         case 'door-cabinet':
           newPiece = createDoorCabinet(params as DoorCabinetParams, materials);
           break;
+        case 'fixture-box':
+          newPiece = createFixtureBox(params as FixtureBoxParams, piece.fixtureColor ?? '#808080');
+          break;
+        case 'fixture-cylinder':
+          newPiece = createFixtureCylinder(params as FixtureCylinderParams, piece.fixtureColor ?? '#808080');
+          break;
         default:
           return;
       }
@@ -445,6 +452,8 @@ export const useStore = create<AppState>()(
       newPiece.position = [...piece.position];
       newPiece.rotation = [...piece.rotation];
       newPiece.locked = piece.locked;
+      newPiece.isFixture = piece.isFixture;
+      newPiece.fixtureColor = piece.fixtureColor;
       newPiece.templateType = piece.templateType;
       newPiece.templateParams = JSON.parse(JSON.stringify(params));
 

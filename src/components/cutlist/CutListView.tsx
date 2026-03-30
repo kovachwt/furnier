@@ -5,7 +5,8 @@ import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
 export function CutListView({ onClose }: { onClose: () => void }) {
-  const pieces = useStore((s) => s.project.pieces);
+  const allPieces = useStore((s) => s.project.pieces);
+  const pieces = useMemo(() => allPieces.filter(p => !p.isFixture), [allPieces]);
   const materials = useStore((s) => s.project.materials);
   const sawKerf = useStore((s) => s.sawKerf);
   const projectName = useStore((s) => s.project.name);

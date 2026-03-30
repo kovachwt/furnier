@@ -11,16 +11,19 @@ interface PanelMeshProps {
   pieceId: string;
   isSelected: boolean;
   isPieceSelected: boolean;
+  isFixture?: boolean;
+  fixtureColor?: string;
 }
 
-export function PanelMesh({ panel, pieceId, isSelected, isPieceSelected }: PanelMeshProps) {
+export function PanelMesh({ panel, pieceId, isSelected, isPieceSelected, isFixture, fixtureColor }: PanelMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const setSelection = useStore((s) => s.setSelection);
   const materials = useStore((s) => s.project.materials);
   const [hovered, setHovered] = useState(false);
 
   const mat = materials.find((m) => m.id === panel.materialId);
-  const color = mat?.color ?? '#ccbbaa';
+  const baseColor = isFixture ? (fixtureColor ?? '#808080') : (mat?.color ?? '#ccbbaa');
+  const color = baseColor;
 
   const w = mmToWorld(panel.width);
   const h = mmToWorld(panel.height);
@@ -54,13 +57,13 @@ export function PanelMesh({ panel, pieceId, isSelected, isPieceSelected }: Panel
       <boxGeometry args={[w, h, d]} />
       <meshStandardMaterial
         color={isSelected ? '#5b9ef5' : isPieceSelected ? '#8bbcf5' : hovered ? '#d4c4b0' : color}
-        transparent={!isSelected && !isPieceSelected}
-        opacity={isSelected || isPieceSelected ? 1 : 0.95}
+        transparent={isFixture || (!isSelected && !isPieceSelected)}
+        opacity={isFixture ? (isSelected || isPieceSelected ? 0.65 : 0.4) : (isSelected || isPieceSelected ? 1 : 0.95)}
       />
       <Edges
         threshold={15}
-        color={isSelected ? '#2563eb' : isPieceSelected ? '#60a5fa' : '#666'}
-        lineWidth={isSelected ? 2 : 1}
+        color={isSelected ? '#2563eb' : isPieceSelected ? '#60a5fa' : isFixture ? '#ff8800' : '#666'}
+        lineWidth={isSelected ? 2 : isFixture ? 1.5 : 1}
       />
     </mesh>
   );

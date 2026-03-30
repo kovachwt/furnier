@@ -1,7 +1,8 @@
 import { v4 as uuid } from 'uuid';
 import type {
   FurniturePiece, Panel, Leg, Hinge, DrawerSlide, Vec3, Material,
-  CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams
+  CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
+  FixtureBoxParams, FixtureCylinderParams
 } from '../types';
 
 function makePanel(
@@ -444,5 +445,59 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
     rotation: [0, 0, 0],
     components,
     locked: false,
+  };
+}
+
+// --- Fixture Templates ---
+
+export function createFixtureBox(params: FixtureBoxParams, color: string): FurniturePiece {
+  const { width, height, depth } = params;
+  const panel: Panel = {
+    id: uuid(),
+    type: 'panel',
+    name: 'Fixture Body',
+    width,
+    height,
+    depth,
+    materialId: '',
+    position: [0, height / 2, 0],
+    rotation: [0, 0, 0],
+    edgeBanding: { top: false, bottom: false, left: false, right: false },
+  };
+
+  return {
+    id: uuid(),
+    name: 'Fixture',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components: [panel],
+    locked: false,
+    isFixture: true,
+    fixtureColor: color,
+  };
+}
+
+export function createFixtureCylinder(params: FixtureCylinderParams, color: string): FurniturePiece {
+  const { diameter, height } = params;
+  const leg: Leg = {
+    id: uuid(),
+    type: 'leg',
+    name: 'Fixture Body',
+    diameter,
+    height,
+    style: 'round',
+    position: [0, height / 2, 0],
+    rotation: [0, 0, 0],
+  };
+
+  return {
+    id: uuid(),
+    name: 'Fixture',
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    components: [leg],
+    locked: false,
+    isFixture: true,
+    fixtureColor: color,
   };
 }

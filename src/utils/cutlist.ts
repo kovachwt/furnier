@@ -7,6 +7,7 @@ export function extractCutPieces(pieces: FurniturePiece[]): CutPiece[] {
   const cutPieces: CutPiece[] = [];
 
   for (const piece of pieces) {
+    if (piece.isFixture) continue; // Skip fixtures — not real material
     for (const comp of piece.components) {
       if (comp.type === 'panel') {
         const panel = comp as Panel;
@@ -217,6 +218,7 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
   const hardwareMap = new Map<string, number>();
 
   for (const piece of pieces) {
+    if (piece.isFixture) continue; // Skip fixtures
     for (const comp of piece.components) {
       if (comp.type === 'panel') {
         const key = comp.materialId;
