@@ -1,6 +1,6 @@
 # Furniture Designer
 
-A frontend-only web application for designing custom furniture in 3D. Design cabinets, dressers, desks, bookshelves, and more by arranging panels, legs, and hardware inside a configurable room. The app produces cut lists, sheet layout diagrams, a bill of materials, and assembly instructions — exportable as PDF.
+A frontend-only web application for designing custom furniture in 3D. Design cabinets, dressers, desks, bookshelves, and more by arranging panels, legs, and hardware inside a configurable room. Place non-furniture room fixtures (pillars, radiators, appliances) to design around real-world obstacles. The app produces cut lists, sheet layout diagrams, a bill of materials, and assembly instructions — exportable as PDF.
 
 No backend required — everything runs in the browser. Share designs with anyone via a link.
 
@@ -35,8 +35,8 @@ npx vite preview
 - Click a piece to select it, double-click to select an individual component
 - PivotControls gizmo for moving/rotating selected furniture
 - Grid snapping (configurable grid size)
-- **Snap-to-face** — panel faces snap to adjacent panel faces and room walls during drag, with yellow guide lines showing active snaps (rotation-aware)
-- **Exploded view** — animated explosion of components for assembly visualization, with numbered labels and adjustable spread factor (0.5×–3.0×)
+- **Snap-to-face** - panel faces snap to adjacent panel faces and room walls during drag, with yellow guide lines showing active snaps (rotation-aware)
+- **Exploded view** - animated explosion of components for assembly visualization, with numbered labels and adjustable spread factor (0.5×-3.0×)
 
 ### Parametric Furniture Templates
 - **Cabinet** — left/right sides, top, bottom, hardboard back, N shelves
@@ -45,7 +45,19 @@ npx vite preview
 - **Dresser** — sides, top, bottom, back, drawer fronts, horizontal dividers, drawer slides per row
 - **Single Panel** — freeform, for custom builds
 
-All templates are configurable (dimensions, material, shelf/drawer count, leg style) and explode into individual editable components on creation. Template-based pieces can be **re-parameterized** — edit the original parameters and click "Regenerate" to rebuild all components while preserving piece identity and position.
+All templates are configurable (dimensions, material, shelf/drawer count, leg style) and explode into individual editable components on creation. Template-based pieces can be **re-parameterized** — edit the original parameters and click “Regenerate” to rebuild all components while preserving piece identity and position.
+
+### Room Fixtures
+Non-furniture objects that represent real-world obstacles in the room. Fixtures are **excluded from cut lists, BOM, assembly instructions, and PDF export** but participate in **snap-to-face** so furniture edges snap against them.
+
+- **Pillar (rectangular)** — box shape, defaults to 300×2500×300mm
+- **Pillar (round)** — cylinder, defaults to ø300×2500mm
+- **Radiator / Fancoil** — shallow box, defaults to 1000×600×100mm
+- **Appliance** — box (fridge, washer, etc.), defaults to 600×850×600mm
+- **Generic Box** — custom dimensions
+- **Generic Cylinder** — custom diameter and height
+
+Fixtures render **semi-transparent with orange edges** to visually distinguish them from furniture. Each fixture has a customizable color. Fixtures support all standard interactions: drag, rotate, snap, duplicate, lock, undo/redo, save/share.
 
 ### Component Editor
 - Edit any panel: dimensions, material, position, rotation
@@ -55,6 +67,7 @@ All templates are configurable (dimensions, material, shelf/drawer count, leg st
 - Duplicate or delete whole furniture pieces
 - Lock pieces to prevent accidental movement
 - **Parametric constraints** — link panel dimensions (width/height) between components with optional offset; when a source panel changes, constrained targets auto-update
+- Fixture editor: simplified view (no material/edge banding), color picker, dimension re-parameterization
 
 ### Materials (6 preloaded)
 - White Melamine 18mm & 25mm
@@ -91,7 +104,7 @@ All defined with standard sheet sizes (2440×1220mm) and grain direction flag.
 ### Project Management
 - Auto-saves to localStorage on every change
 - Export/import project as `.json` file
-- **Share via link** — compress the entire project into a URL and share it; no backend needed, links never expire
+- **Share via link** - compress the entire project into a URL and share it; no backend needed, links never expire
 - Undo/redo with Ctrl+Z / Ctrl+Y (50-step history)
 - Delete key removes selected piece or component
 - Escape to deselect
@@ -125,7 +138,7 @@ src/
   store/useStore.ts           Zustand store (state, actions, undo/redo, persistence)
   utils/
     snap.ts                   Snap-to-grid, snap-to-face, and snap-to-target logic
-    templates.ts              Parametric furniture generators
+    templates.ts              Parametric furniture + fixture generators
     cutlist.ts                Guillotine bin-packing, BOM generation
     pdfExport.ts              PDF generation (cut list, BOM, assembly) via jsPDF
     sharing.ts                URL-based project sharing (deflate + base64url in hash)
@@ -162,6 +175,7 @@ Project
 ├── Materials[] { name, thickness, sheetWidth, sheetHeight, color, grainDirection }
 └── Pieces[]
     ├── name, position, rotation, locked
+    ├── isFixture?, fixtureColor?          ← room fixtures (excluded from cut list/BOM)
     ├── templateType?, templateParams?     ← for re-parameterization
     ├── constraints?[]                     ← parametric links between components
     │   └── { sourceComponentId, sourceProperty, targetComponentId, targetProperty, offset }
@@ -173,9 +187,11 @@ Project
         └── ShelfPin {}
 ```
 
+Fixtures are stored as regular pieces with `isFixture: true`. Box fixtures use a single Panel component (with `depth` as the full Z dimension, not material thickness). Cylinder fixtures use a single Leg component. Fixture panels have an empty `materialId` — their color comes from `fixtureColor` on the piece.
+
 ## Cut List Algorithm
 
-The app uses a **guillotine bin-packing** algorithm, which mirrors how real panel saws work — every cut must go edge-to-edge, dividing a rectangle into exactly two rectangles.
+The app uses a **guillotine bin-packing** algorithm, which mirrors how real panel saws work - every cut must go edge-to-edge, dividing a rectangle into exactly two rectangles.
 
 1. Panels are grouped by material
 2. Sorted by area (largest first)
@@ -191,6 +207,7 @@ The app uses a **guillotine bin-packing** algorithm, which mirrors how real pane
 - glTF export for sharing 3D models
 - Material editor UI (add/edit/remove materials)
 - Door/window cutouts in room walls
+- More fixture shapes (L-shaped, angled, custom polygon)
 - Instanced rendering for large projects (100+ panels)
 - Snap guide lines with distance annotations during drag
 - Constraint graph visualization (show links between constrained components)

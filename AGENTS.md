@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A frontend-only SPA for designing custom furniture in 3D, built with React + Three.js (via React Three Fiber). Users place parametric furniture (cabinets, desks, dressers, bookshelves) inside a configurable room, edit individual panels and hardware, then generate cut lists, sheet layouts, a bill of materials, and assembly instructions.
+A frontend-only SPA for designing custom furniture in 3D, built with React + Three.js (via React Three Fiber). Users place parametric furniture (cabinets, desks, dressers, bookshelves) and room fixtures (pillars, radiators, appliances) inside a configurable room, edit individual panels and hardware, then generate cut lists, sheet layouts, a bill of materials, and assembly instructions.
 
 No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON. Projects can also be shared via URL — the entire project is compressed into the URL hash fragment.
 
@@ -32,7 +32,7 @@ src/
   types/index.ts        ← All TypeScript types (the single source of truth for data shapes)
   store/useStore.ts     ← Zustand store: all state + actions + undo/redo + localStorage persistence
   utils/
-    templates.ts        ← Parametric generators: createCabinet(), createBookshelf(), createDesk(), createDresser()
+    templates.ts        ← Parametric generators: createCabinet(), createBookshelf(), createDesk(), createDresser(), createFixtureBox(), createFixtureCylinder()
     cutlist.ts          ← Guillotine bin-packing algorithm + BOM generation
     snap.ts             ← Grid snap + snap-to-face + snap-to-target helpers
     pdfExport.ts        ← PDF generation (cut list, BOM, assembly) via jsPDF
@@ -56,6 +56,7 @@ src/
 - **Snap-to-face**: during drag, each face of the dragged piece's panels is checked against faces of all other pieces' panels and room walls. Rotation-aware AABB half-extents ensure correct face positions for rotated panels. Face snaps take priority over grid snaps.
 - **Exploded view**: purely a rendering effect — component positions in the store are never modified. `useFrame` + refs animate wrapper `<group>` offsets toward/away from the piece center. Labels use drei's `Text` component.
 - **Guillotine bin-packing**: chosen over free-form nesting because real panel saws only make through-cuts. The algorithm is in `cutlist.ts`, ~120 lines, using Best Short Side Fit heuristic.
+- **Room fixtures**: non-furniture items (pillars, radiators, appliances, pipes) are modeled as `FurniturePiece` objects with `isFixture: true`. This reuses 100% of the existing drag/snap/selection/undo infrastructure with zero duplication. Fixtures are excluded from cut lists, BOM, assembly instructions, and PDF export by simple filtering. They participate in snap-to-face so furniture snaps against them. Rendered semi-transparent with orange edges for visual distinction.
 - **No cost tracking**: deliberately excluded from scope. The BOM is quantities + specs only.
 - **No backend**: localStorage auto-save + JSON file export/import. The project file is a direct JSON serialization of the `Project` type.
 - **URL sharing**: projects are shared by compressing the JSON with deflate (via fflate), encoding as base64url, and placing it in the URL hash fragment (`#share=...`). Default materials are stripped before compression and restored on load. The hash is never sent to the server, keeping shared data private. Typical projects (5–20 pieces) produce URLs of 2,000–8,000 chars, well within browser limits.
@@ -103,6 +104,28 @@ Actions are methods on the same store object. History is pushed after any struct
 6. Add the template type to the `regeneratePiece` switch in `store/useStore.ts`
 7. Add template-specific parameter inputs to `TemplateParams` in `PieceEditor.tsx`
 
+### Adding a new fixture preset
+
+Fixtures are non-furniture room objects (pillars, radiators, appliances, etc.) that use the `isFixture` flag on `FurniturePiece`. They reuse all existing piece infrastructure but are excluded from cut lists, BOM, and assembly.
+
+To add a new preset (e.g., "Window Sill"):
+
+1. Add a new option to the `<optgroup label="Room Fixtures">` dropdown in `AddFurniture.tsx`
+2. Add a case to `handleTemplateChange()` with default dimensions and color
+3. Add a name entry to the `names` map in the fixture creation block of `handleAdd()`
+4. The preset maps to either `createFixtureBox()` (for box shapes) or `createFixtureCylinder()` (for cylinders) — no new template function needed
+
+The stored `templateType` is always `'fixture-box'` or `'fixture-cylinder'` regardless of the preset name. The preset just pre-fills defaults.
+
+To add a fundamentally new fixture shape (not a box or cylinder):
+
+1. Add a new component type (see "Adding a new component type" above)
+2. Add a new `FixtureNewShapeParams` interface in `types/index.ts`
+3. Add `createFixtureNewShape()` in `utils/templates.ts` — must set `isFixture: true` and `fixtureColor`
+4. Add `'fixture-newshape'` to the `templateType` union in `types/index.ts`
+5. Add the case to `regeneratePiece` in `store/useStore.ts`
+6. Pass `isFixture`/`fixtureColor` to the new mesh component from `FurniturePieceMesh.tsx`
+
 ### Adding a new component type
 
 1. Add the type interface in `types/index.ts` and add it to the `Component` union
@@ -136,6 +159,8 @@ Snap logic is in `utils/snap.ts`:
 - `snapToGrid()` / `snapPositionToGrid()` — grid-based snapping (fallback for axes not face-snapped)
 - Visual snap guides are rendered by the `SnapGuides` component in `Scene.tsx`
 
+Fixtures participate in snap-to-face automatically — `collectSnapTargets()` iterates all pieces including fixtures, so furniture faces snap against fixture faces.
+
 ### Modifying the sharing system
 
 Sharing logic is in `utils/sharing.ts`:
@@ -156,6 +181,8 @@ All logic is in `utils/cutlist.ts`:
 - `guillotinePack()` — the core bin-packing function
 - `generateCutList()` — orchestrates: extract panels → group by material → pack each group
 - `generateBOM()` — iterates all components, aggregates by type
+
+Both `extractCutPieces()` and `generateBOM()` skip pieces with `isFixture: true`. The `CutListView` component also pre-filters fixtures before passing pieces to these functions and to the PDF exporter.
 
 ### Modifying the PDF export
 
