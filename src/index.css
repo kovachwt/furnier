@@ -679,6 +679,33 @@ html, body, #root {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Room settings dialog */
+.room-settings-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-width: 360px;
+  width: 100%;
+  margin-top: 15vh;
+  animation: dialog-in 0.2s ease-out;
+}
+
+.room-settings-body {
+  padding: 16px 20px 20px;
+}
+
+.room-settings-body .form-row {
+  margin-bottom: 10px;
+}
+
+.room-dims-summary {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
 /* Share dialog */
 .share-dialog {
   background: var(--bg-secondary);
