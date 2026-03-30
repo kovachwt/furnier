@@ -111,6 +111,7 @@ export default function App() {
         {/* Left sidebar */}
         <div className="sidebar left-sidebar">
           <ProjectActions />
+          <RoomSettings />
 
           <div className="tab-bar">
             <button
@@ -129,7 +130,6 @@ export default function App() {
 
           {sidebarTab === 'add' && (
             <>
-              <RoomSettings />
               <AddFurniture />
             </>
           )}
