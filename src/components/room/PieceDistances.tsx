@@ -1,8 +1,7 @@
-import { Text, Line } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import { useStore } from '../../store/useStore';
-import { mmToWorld, worldToMm } from './RoomBox';
+import { mmToWorld } from './RoomBox';
 import type { FurniturePiece, Vec3 } from '../../types';
-import * as THREE from 'three';
 
 /** Compute the axis-aligned bounding box (in mm) for a piece. */
 function getPieceAABB(piece: FurniturePiece): {
@@ -21,7 +20,7 @@ function getPieceAABB(piece: FurniturePiece): {
     if (comp.type === 'panel') {
       hw = comp.width / 2;
       hh = comp.height / 2;
-      hd = comp.thickness / 2;
+      hd = comp.depth / 2;
     } else if (comp.type === 'leg') {
       hw = comp.diameter / 2;
       hh = comp.height;

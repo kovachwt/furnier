@@ -315,7 +315,7 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
   const innerW = width - 2 * t;
   const innerH = height - 2 * t;
   const doorCount = Math.max(1, Math.min(2, params.doors));
-  const components: (Panel | Hinge)[] = [];
+  const components: (Panel | Hinge | Handle)[] = [];
 
   // Left side
   components.push(makePanel('Left Side', depth, height, params.materialId, t,
@@ -367,7 +367,7 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
   const hingeInset = 100; // mm from top/bottom edge of door
   const hingeZ = depth / 2 - t;
   const handleY = height / 2 + 50; // handle height from floor
-  const handleZ = depth / 2 - t / 2;
+
 
   if (doorCount === 1) {
     // Single door covering the full opening

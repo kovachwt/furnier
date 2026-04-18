@@ -17,7 +17,7 @@ interface ShareDialogProps {
 /**
  * Modal that displays the share URL with a QR code for easy mobile access.
  */
-export function ShareDialog({ shareUrl, projectName, onClose }: ShareDialogProps) {
+export function ShareDialog({ shareUrl, onClose }: ShareDialogProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
