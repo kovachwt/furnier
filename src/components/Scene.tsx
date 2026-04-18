@@ -8,6 +8,7 @@ import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
 import { KeyboardCameraControls } from './KeyboardCameraControls';
 import { CameraAnimator } from './CameraAnimator';
 import { ViewportCapture } from './ViewportCapture';
+import { ClashVisualization } from './ClashVisualization';
 import type { Vec3 } from '../types';
 
 /** Compute the center X/Z of a piece's AABB in mm. */
@@ -223,6 +224,7 @@ export function Scene() {
 
       <SnapGuides />
       <SmartGuides />
+      <ClashVisualization />
 
       <OrbitControls
         makeDefault

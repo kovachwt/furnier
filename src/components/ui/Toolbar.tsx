@@ -18,6 +18,9 @@ export function Toolbar() {
   const setShowGrid = useStore((s) => s.setShowGrid);
   const showThickness = useStore((s) => s.showThickness);
   const setShowThickness = useStore((s) => s.setShowThickness);
+  const showClashDetection = useStore((s) => s.showClashDetection);
+  const setShowClashDetection = useStore((s) => s.setShowClashDetection);
+  const clashPairs = useStore((s) => s.clashPairs);
   const explodedView = useStore((s) => s.explodedView);
   const setExplodedView = useStore((s) => s.setExplodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
@@ -81,6 +84,13 @@ export function Toolbar() {
           title="Exaggerate panel thickness for visibility"
         >
           ▥ Thick
+        </button>
+        <button
+          className={`tool-btn ${showClashDetection ? 'active' : ''}`}
+          onClick={() => setShowClashDetection(!showClashDetection)}
+          title="Detect and show overlapping pieces"
+        >
+          ⚠ Clash{clashPairs.length > 0 ? ` (${clashPairs.length})` : ''}
         </button>
       </div>
 

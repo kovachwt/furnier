@@ -8,6 +8,7 @@ import type {
   FixtureBoxParams, FixtureCylinderParams,
 } from '../types';
 import type { SnapLine } from '../utils/snap';
+import type { ClashPair } from '../utils/clashDetection';
 import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet, createFixtureBox, createFixtureCylinder } from '../utils/templates';
 
 const DEFAULT_MATERIALS: Material[] = [
@@ -275,6 +276,10 @@ interface AppState {
   // Theme
   darkTheme: boolean;
 
+  // Clash detection
+  showClashDetection: boolean;
+  clashPairs: ClashPair[];
+
   // Snap guides
   activeSnapLines: SnapLine[];
 
@@ -327,6 +332,7 @@ interface AppState {
   setShowDistances: (show: boolean) => void;
   setShowGrid: (show: boolean) => void;
   setShowThickness: (show: boolean) => void;
+  setShowClashDetection: (enabled: boolean) => void;
   setGridSize: (size: number) => void;
   setSawKerf: (kerf: number) => void;
   setExplodedView: (enabled: boolean) => void;
@@ -375,6 +381,8 @@ export const useStore = create<AppState>()(
     shouldCaptureViewport: false,
     darkTheme: true,
     activeSnapLines: [],
+    showClashDetection: false,
+    clashPairs: [],
 
     history: [{ pieces: [] } as HistoryEntry],
     historyIndex: 0,
@@ -711,6 +719,7 @@ export const useStore = create<AppState>()(
     setShouldCaptureViewport: (val) => set({ shouldCaptureViewport: val }),
     takeScreenshot: () => set({ shouldCaptureViewport: true }),
     toggleTheme: () => set((s) => ({ darkTheme: !s.darkTheme })),
+    setShowClashDetection: (enabled: boolean) => set({ showClashDetection: enabled }),
     setActiveSnapLines: (lines) => set({ activeSnapLines: lines }),
 
     pushHistory: () =>
@@ -812,3 +821,5 @@ try {
     }
   }
 } catch { /* ignore */ }
+
+
