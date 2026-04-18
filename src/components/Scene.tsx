@@ -7,6 +7,115 @@ import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
 import { KeyboardCameraControls } from './KeyboardCameraControls';
 import { CameraAnimator } from './CameraAnimator';
 import { ViewportCapture } from './ViewportCapture';
+import type { Vec3 } from '../types';
+
+/** Compute the center X/Z of a piece's AABB in mm. */
+function getPieceCenter(piece: { components: Array<{ position: Vec3; type: string; width?: number; height?: number; depth?: number; diameter?: number }> }): { cx: number; cz: number } {
+  let cx = 0, cz = 0, n = 0;
+  for (const comp of piece.components) {
+    cx += comp.position[0];
+    cz += comp.position[2];
+    n++;
+  }
+  return n > 0 ? { cx: cx / n, cz: cz / n } : { cx: 0, cz: 0 };
+}
+
+/** Smart guides: show magenta center-alignment lines for the selected piece. */
+function SmartGuides() {
+  const selectedPieceId = useStore((s) => s.selectedPieceId);
+  const pieces = useStore((s) => s.project.pieces);
+  const room = useStore((s) => s.project.room);
+
+  if (!selectedPieceId) return null;
+
+  const hw = mmToWorld(room.width / 2);
+  const hd = mmToWorld(room.depth / 2);
+  const h = mmToWorld(room.height);
+
+  const selectedPiece = pieces.find(p => p.id === selectedPieceId);
+  if (!selectedPiece) return null;
+
+  const { cx, cz } = getPieceCenter(selectedPiece);
+  const worldCx = mmToWorld(cx);
+  const worldCz = mmToWorld(cz);
+
+  // Find neighbors whose center aligns with selected piece's center (within 10mm)
+  const alignThreshold = 10;
+  const alignedNeighbors: string[] = [];
+
+  for (const other of pieces) {
+    if (other.id === selectedPieceId || other.isFixture) continue;
+    const { cx: ocx, cz: ocz } = getPieceCenter(other);
+    const dx = Math.abs(ocx - cx);
+    const dz = Math.abs(ocz - cz);
+    if (dx < alignThreshold || dz < alignThreshold) {
+      alignedNeighbors.push(other.id);
+    }
+  }
+
+  return (
+    <>
+      {/* Vertical center line (X) — full height, across back wall and floor */}
+      <Line
+        points={[[worldCx, 0, -hd], [worldCx, h, -hd]]}
+        color="#ff00ff"
+        lineWidth={1}
+        transparent
+        opacity={0.5}
+      />
+      <Line
+        points={[[worldCx, 0, -hd], [worldCx, 0, hd]]}
+        color="#ff00ff"
+        lineWidth={1}
+        transparent
+        opacity={0.5}
+      />
+
+      {/* Horizontal center line (Z) — full depth, across floor and left wall */}
+      <Line
+        points={[[hw, 0, worldCz], [-hw, 0, worldCz]]}
+        color="#ff00ff"
+        lineWidth={1}
+        transparent
+        opacity={0.5}
+      />
+      <Line
+        points={[[hw, 0, worldCz], [hw, h, worldCz]]}
+        color="#ff00ff"
+        lineWidth={1}
+        transparent
+        opacity={0.5}
+      />
+
+      {/* Highlight aligned neighbors */}
+      {alignedNeighbors.map((neighborId) => {
+        const neighbor = pieces.find(p => p.id === neighborId);
+        if (!neighbor) return null;
+        const { cx: ncx, cz: ncz } = getPieceCenter(neighbor);
+        return (
+          <group key={neighborId}>
+            {/* Vertical line through neighbor center */}
+            <Line
+              points={[[mmToWorld(ncx), 0, -hd], [mmToWorld(ncx), h, -hd]]}
+              color="#ff00ff"
+              lineWidth={1}
+              transparent
+              opacity={0.3}
+            />
+            {/* Horizontal line through neighbor center */}
+            <Line
+              points={[[hw, 0, mmToWorld(ncz)], [-hw, 0, mmToWorld(ncz)]]}
+              color="#ff00ff"
+              lineWidth={1}
+              transparent
+              opacity={0.3}
+            />
+          </group>
+        );
+      })}
+    </>
+  );
+}
 
 function SnapGuides() {
   const activeSnapLines = useStore((s) => s.activeSnapLines);
@@ -86,6 +195,7 @@ export function Scene() {
       ))}
 
       <SnapGuides />
+      <SmartGuides />
 
       <OrbitControls
         makeDefault

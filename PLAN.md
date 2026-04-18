@@ -145,7 +145,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [x] **Temporary dimension-mode** showing all piece distances to nearest wall / neighbor ([docs](docs/piece-distances.md))
 - [ ] **Multi-select pieces** — group move, align, distribute
 - [ ] **Alignment tools** — align-to-wall, align-centers, distribute-evenly
-- [ ] **Smart guides** — magenta guide lines like Figma for center-alignment with neighbors
+- [x] **Smart guides** — magenta guide lines like Figma for center-alignment with neighbors ([docs](docs/smart-guides.md))
 - [ ] **Context menu** on right-click (duplicate, delete, lock, bring-to-front of a stack)
 - [x] **Piece search / filter** in the piece list ([docs](docs/piece-search-filter.md))
 - [ ] **Layers / groups** — organize pieces into named groups that can be hidden/locked
