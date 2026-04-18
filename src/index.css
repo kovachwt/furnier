@@ -68,13 +68,9 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
-  max-height: 72px;          /* 2 rows of compact buttons */
-  overflow-x: auto;
-  overflow-y: hidden;
 }
 
-/* Hide scrollbar but keep horizontal scroll on mobile strip */
+/* Hide scrollbar but keep horizontal scroll */
 .toolbar-scroll::-webkit-scrollbar {
   display: none;
 }
@@ -1466,17 +1462,14 @@ html, body, #root {
   }
 
   .toolbar {
-    /* Constrain mobile toolbar to 2 rows of compact buttons */
     padding: 4px 6px;
-    overflow: hidden;        /* clip anything beyond the scroll area */
   }
 
-  /* The inner scroll strip wraps to 2 rows max then scrolls horizontally */
+  /* Single-row horizontally scrolling strip */
   .toolbar-scroll {
-    max-height: 72px;       /* 2 rows × ~36px */
+    flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
-    flex-wrap: wrap;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1484,7 +1477,7 @@ html, body, #root {
     padding: 4px 8px;
     font-size: 11px;
     white-space: nowrap;
-    flex-shrink: 0;     /* buttons never collapse – scroll instead */
+    flex-shrink: 0;
   }
 
   .tool-btn .tool-icon {
