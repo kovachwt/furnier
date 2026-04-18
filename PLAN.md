@@ -66,7 +66,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Material library import/export** as JSON
 - [ ] **Textured PBR materials** — wood grain, laminate patterns, with grain-direction preview
 - [ ] **Edge banding library** — matching and contrasting options, priced per meter
-- [ ] **Edge-banding length estimate** — meters per color/type
+- [x] **Edge-banding length estimate** — meters per color/type ([docs](docs/edge-banding-estimate.md))
 - [ ] **Finish / stain / paint layer** separate from panel material (so the same plywood can have different finishes)
 - [ ] **Sheet size variants** per material (e.g., 2440×1220 vs 3050×1525)
 - [ ] **Off-cut / leftover inventory** — start from a pool of partial sheets before using fresh ones

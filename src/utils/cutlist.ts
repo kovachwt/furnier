@@ -269,6 +269,58 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
 }
 
 /**
+ * Edge-banding side names.
+ */
+const SIDE_NAMES = ['top', 'bottom', 'left', 'right'] as const;
+
+/**
+ * Edge-banding length estimate per side.
+ */
+export interface EdgeBandingEstimate {
+  side: string;
+  totalLengthMm: number;
+  totalLengthM: number;
+  panelCount: number;
+}
+
+/**
+ * Calculate total edge-banding length needed per side.
+ * Returns an estimate for top/bottom/left/right edges.
+ */
+export function generateEdgeBandingEstimate(pieces: FurniturePiece[]): EdgeBandingEstimate[] {
+  const totals: Record<string, { length: number; count: number }> = {
+    top: { length: 0, count: 0 },
+    bottom: { length: 0, count: 0 },
+    left: { length: 0, count: 0 },
+    right: { length: 0, count: 0 },
+  };
+
+  for (const piece of pieces) {
+    if (piece.isFixture) continue;
+    for (const comp of piece.components) {
+      if (comp.type !== 'panel') continue;
+      const panel = comp as Panel;
+      for (const side of SIDE_NAMES) {
+        if (panel.edgeBanding[side]) {
+          // For horizontal edges (top/bottom), the banding runs along the width
+          // For vertical edges (left/right), the banding runs along the height
+          const length = (side === 'top' || side === 'bottom') ? panel.width : panel.height;
+          totals[side].length += length;
+          totals[side].count++;
+        }
+      }
+    }
+  }
+
+  return SIDE_NAMES.map(side => ({
+    side: side.charAt(0).toUpperCase() + side.slice(1),
+    totalLengthMm: totals[side].length,
+    totalLengthM: Math.round(totals[side].length / 10) / 100, // round to 2 decimal places
+    panelCount: totals[side].count,
+  }));
+}
+
+/**
  * Export the cut list as a CSV string.
  * Includes three sheets: Panels, BOM, and Sheet Layouts.
  */

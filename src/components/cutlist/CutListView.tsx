@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
-import { generateCutList, generateBOM, generateCutListCSV, downloadCSV } from '../../utils/cutlist';
+import { generateCutList, generateBOM, generateCutListCSV, downloadCSV, generateEdgeBandingEstimate } from '../../utils/cutlist';
 import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
@@ -17,6 +17,7 @@ export function CutListView({ onClose }: { onClose: () => void }) {
   );
 
   const bom = useMemo(() => generateBOM(pieces, materials), [pieces, materials]);
+  const edgeBanding = useMemo(() => generateEdgeBandingEstimate(pieces), [pieces]);
 
   const handleExportPDF = useCallback(() => {
     exportProjectPDF(projectName, layouts, bom, pieces, materials, sawKerf);
@@ -110,6 +111,31 @@ export function CutListView({ onClose }: { onClose: () => void }) {
               })()}
             </tbody>
           </table>
+
+          {/* Edge-banding estimate */}
+          {edgeBanding.some(e => e.panelCount > 0) && (
+            <>
+              <h3 style={{ marginTop: 24 }}>Edge Banding Estimate</h3>
+              <table className="bom-table">
+                <thead>
+                  <tr>
+                    <th>Side</th>
+                    <th>Panels</th>
+                    <th>Total Length</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {edgeBanding.map((e, i) => (
+                    <tr key={i}>
+                      <td>{e.side}</td>
+                      <td>{e.panelCount}</td>
+                      <td>{e.totalLengthM} m ({e.totalLengthMm} mm)</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
           {/* Assembly Notes */}
           <h3 style={{ marginTop: 24 }}>Assembly Order</h3>
