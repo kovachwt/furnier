@@ -19,6 +19,8 @@ export function Toolbar() {
   const setSnapToFaces = useStore((s) => s.setSnapToFaces);
   const showDimensions = useStore((s) => s.showDimensions);
   const setShowDimensions = useStore((s) => s.setShowDimensions);
+  const showDistances = useStore((s) => s.showDistances);
+  const setShowDistances = useStore((s) => s.setShowDistances);
   const showGrid = useStore((s) => s.showGrid);
   const setShowGrid = useStore((s) => s.setShowGrid);
   const showThickness = useStore((s) => s.showThickness);
@@ -83,6 +85,13 @@ export function Toolbar() {
           title="Show dimensions"
         >
           ↔ Dims
+        </button>
+        <button
+          className={`tool-btn ${showDistances ? 'active' : ''}`}
+          onClick={() => setShowDistances(!showDistances)}
+          title="Show piece-to-wall/neighbor distances"
+        >
+          ↕ Dist
         </button>
         <button
           className={`tool-btn ${showThickness ? 'active' : ''}`}

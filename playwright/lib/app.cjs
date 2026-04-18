@@ -73,6 +73,19 @@ async function toggleTheme(page) {
   await page.waitForTimeout(300);
 }
 
+async function toggleDistances(page) {
+  // Click the "Dist" toggle button in the toolbar.
+  const toggled = await page.evaluate(() => {
+    const btns = Array.from(document.querySelectorAll('.toolbar button.tool-btn'));
+    const target = btns.find((b) => /Dist/i.test(b.textContent || ''));
+    if (!target) return false;
+    target.click();
+    return true;
+  });
+  if (!toggled) throw new Error('Could not find Dist toggle button');
+  await page.waitForTimeout(600);
+}
+
 /**
  * Add a piece using one of the built-in templates, with optional
  * parameter overrides. Use for reproducible test scenarios.
@@ -110,6 +123,7 @@ module.exports = {
   clickAdd,
   clickToolbarButton,
   toggleTheme,
+  toggleDistances,
   addPiece,
   SCENE_SETTLE_MS,
 };

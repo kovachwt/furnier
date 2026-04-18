@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Line } from '@react-three/drei';
 import { useStore } from '../store/useStore';
 import { RoomBox, mmToWorld } from './room/RoomBox';
+import { PieceDistances } from './room/PieceDistances';
 import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
 import { KeyboardCameraControls } from './KeyboardCameraControls';
 import { CameraAnimator } from './CameraAnimator';
@@ -99,6 +100,7 @@ export function Scene() {
       <KeyboardCameraControls />
       <CameraAnimator />
       <ViewportCapture />
+      <PieceDistances />
     </Canvas>
   );
 }

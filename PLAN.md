@@ -142,7 +142,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 - [ ] **Keyboard shortcut cheat-sheet overlay** (? key)
 - [ ] **Measurement annotations** — click two faces to draw a live dimension line
-- [ ] **Temporary dimension-mode** showing all piece distances to nearest wall / neighbor
+- [x] **Temporary dimension-mode** showing all piece distances to nearest wall / neighbor ([docs](docs/piece-distances.md))
 - [ ] **Multi-select pieces** — group move, align, distribute
 - [ ] **Alignment tools** — align-to-wall, align-centers, distribute-evenly
 - [ ] **Smart guides** — magenta guide lines like Figma for center-alignment with neighbors
