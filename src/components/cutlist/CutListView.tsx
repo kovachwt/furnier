@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
-import { generateCutList, generateBOM, generateCutListCSV, downloadCSV, generateEdgeBandingEstimate } from '../../utils/cutlist';
+import { generateCutList, generateBOM, generateCutListCSV, downloadCSV, generateEdgeBandingEstimate, findSheetOverflow } from '../../utils/cutlist';
 import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
@@ -18,6 +18,7 @@ export function CutListView({ onClose }: { onClose: () => void }) {
 
   const bom = useMemo(() => generateBOM(pieces, materials), [pieces, materials]);
   const edgeBanding = useMemo(() => generateEdgeBandingEstimate(pieces), [pieces]);
+  const sheetOverflow = useMemo(() => findSheetOverflow(pieces, materials), [pieces, materials]);
 
   const handleExportPDF = useCallback(() => {
     exportProjectPDF(projectName, layouts, bom, pieces, materials, sawKerf);
@@ -55,6 +56,22 @@ export function CutListView({ onClose }: { onClose: () => void }) {
               style={{ width: 80 }}
             />
           </div>
+
+          {/* Sheet overflow warning */}
+          {sheetOverflow.length > 0 && (
+            <div className="warning-box">
+              <h4>⚠ {sheetOverflow.length} panel(s) too large for material sheet size:</h4>
+              {sheetOverflow.map((o, i) => {
+                const mat = materials.find(m => m.id === o.materialId);
+                return (
+                  <div key={i}>
+                    <strong>{o.pieceName}</strong> / {o.panelName}: {o.width}×{o.height}mm
+                    {' — max sheet: '}{mat ? `${mat.sheetWidth}×${mat.sheetHeight}mm` : o.sheetWidth + '×' + o.sheetHeight + 'mm'}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Sheet layouts */}
           <h3>Sheet Layouts ({layouts.length} sheets)</h3>

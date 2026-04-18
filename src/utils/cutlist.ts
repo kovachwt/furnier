@@ -1,6 +1,57 @@
 import type { FurniturePiece, Material, CutPiece, SheetLayout, Panel } from '../types';
 
 /**
+ * A panel that is too large for any available sheet of its material.
+ */
+export interface SheetOverflow {
+  panelId: string;
+  pieceName: string;
+  panelName: string;
+  width: number;
+  height: number;
+  materialId: string;
+  sheetWidth: number;
+  sheetHeight: number;
+}
+
+/**
+ * Check for panels that exceed all available sheet sizes for their material.
+ * A panel overflows if both orientations (normal and rotated) exceed the sheet dimensions.
+ */
+export function findSheetOverflow(pieces: FurniturePiece[], materials: Material[]): SheetOverflow[] {
+  const overflows: SheetOverflow[] = [];
+
+  for (const piece of pieces) {
+    if (piece.isFixture) continue;
+    for (const comp of piece.components) {
+      if (comp.type !== 'panel') continue;
+      const panel = comp as Panel;
+      const mat = materials.find(m => m.id === panel.materialId);
+      if (!mat) continue;
+
+      const { sheetWidth, sheetHeight } = mat;
+      const fitsNormal = panel.width <= sheetWidth && panel.height <= sheetHeight;
+      const fitsRotated = panel.width <= sheetHeight && panel.height <= sheetWidth;
+
+      if (!fitsNormal && !fitsRotated) {
+        overflows.push({
+          panelId: panel.id,
+          pieceName: piece.name,
+          panelName: panel.name,
+          width: panel.width,
+          height: panel.height,
+          materialId: panel.materialId,
+          sheetWidth,
+          sheetHeight,
+        });
+      }
+    }
+  }
+
+  return overflows;
+}
+
+/**
  * Extract all panels from all pieces, grouped by material.
  */
 export function extractCutPieces(pieces: FurniturePiece[]): CutPiece[] {

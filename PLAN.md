@@ -98,7 +98,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [x] **Floor-gap warning** — piece floating unintentionally ([docs](docs/floor-gap-warning.md))
 - [ ] **Unreachable-drawer warning** — drawer blocked by pillar / wall / neighbor
 - [ ] **Door-swing clearance check**
-- [ ] **Sheet-size overflow** — panel too big for any sheet in its material
+- [x] **Sheet-size overflow** — panel too big for any sheet in its material ([docs](docs/sheet-size-overflow.md))
 - [ ] **Constraint-cycle detection** for parametric constraints
 
 ## Cut List & Optimization
