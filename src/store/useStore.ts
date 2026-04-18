@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { produce } from 'immer';
 import { v4 as uuid } from 'uuid';
 import type {
-  Project, Room, FurniturePiece, Component, Material, Tool,
+  Project, Room, FurniturePiece, Component, Material,
   ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
   FixtureBoxParams, FixtureCylinderParams,
 } from '../types';
@@ -253,7 +253,6 @@ interface AppState {
   // UI state
   selectedPieceId: string | null;
   selectedComponentId: string | null;
-  activeTool: Tool;
   activeCameraPreset: string;
   cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
   snapEnabled: boolean;
@@ -321,7 +320,6 @@ interface AppState {
   rotateSelectedPiece: (angleDeg: number) => void;
 
   // Tools & toggles
-  setActiveTool: (tool: Tool) => void;
   setActiveCameraPreset: (preset: string) => void;
   setCameraTarget: (position: [number, number, number], target: [number, number, number]) => void;
   setSnapEnabled: (enabled: boolean) => void;
@@ -362,7 +360,6 @@ export const useStore = create<AppState>()(
 
     selectedPieceId: null,
     selectedComponentId: null,
-    activeTool: 'select',
     activeCameraPreset: 'iso',
     cameraTarget: null,
     snapEnabled: true,
@@ -702,7 +699,6 @@ export const useStore = create<AppState>()(
       get().pushHistory();
     },
 
-    setActiveTool: (tool) => set({ activeTool: tool }),
     setActiveCameraPreset: (preset) => set({ activeCameraPreset: preset }),
     setCameraTarget: (position, target) => set({ cameraTarget: { position, target } }),
     setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),

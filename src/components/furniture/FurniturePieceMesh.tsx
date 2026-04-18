@@ -72,17 +72,14 @@ export function FurniturePieceMesh({ piece }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const selectedPieceId = useStore((s) => s.selectedPieceId);
   const selectedComponentId = useStore((s) => s.selectedComponentId);
-  const activeTool = useStore((s) => s.activeTool);
   const explodedView = useStore((s) => s.explodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
 
   const isSelected = selectedPieceId === piece.id;
   const hasComponentSelected = isSelected && selectedComponentId != null &&
     piece.components.some(c => c.id === selectedComponentId);
-  const canTransformPiece = isSelected && !hasComponentSelected &&
-    (activeTool === 'move' || activeTool === 'select') && !explodedView;
-  const canTransformComponent = isSelected && hasComponentSelected &&
-    (activeTool === 'move' || activeTool === 'select') && !explodedView && !piece.locked;
+  const canTransformPiece = isSelected && !hasComponentSelected && !explodedView;
+  const canTransformComponent = isSelected && hasComponentSelected && !explodedView && !piece.locked;
 
   // --- Exploded view animation ---
   const explodeGroupRefs = useRef<Map<string, THREE.Group>>(new Map());
@@ -393,7 +390,6 @@ export function FurniturePieceMesh({ piece }: Props) {
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
-        disableRotations={activeTool === 'move'}
       >
         {inner}
       </PivotControls>

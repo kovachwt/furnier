@@ -1,16 +1,8 @@
 import { useStore } from '../../store/useStore';
-import type { Tool } from '../../types';
 import { CameraPresets } from './CameraPresets';
 import { ScreenshotButton } from './ScreenshotButton';
 
-const tools: { id: Tool; label: string; icon: string }[] = [
-  { id: 'select', label: 'Select', icon: '⇱' },
-  { id: 'move', label: 'Move', icon: '✥' },
-];
-
 export function Toolbar() {
-  const activeTool = useStore((s) => s.activeTool);
-  const setActiveTool = useStore((s) => s.setActiveTool);
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
   const snapEnabled = useStore((s) => s.snapEnabled);
@@ -36,22 +28,6 @@ export function Toolbar() {
 
   return (
     <div className="toolbar">
-      <div className="tool-group">
-        {tools.map((t) => (
-          <button
-            key={t.id}
-            className={`tool-btn ${activeTool === t.id ? 'active' : ''}`}
-            onClick={() => setActiveTool(t.id)}
-            title={t.label}
-          >
-            <span className="tool-icon">{t.icon}</span>
-            <span className="tool-label">{t.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="tool-separator" />
-
       <div className="tool-group">
         <button className="tool-btn" onClick={undo} title="Undo (Ctrl+Z)">↩ Undo</button>
         <button className="tool-btn" onClick={redo} title="Redo (Ctrl+Y)">↪ Redo</button>

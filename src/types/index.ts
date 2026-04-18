@@ -108,7 +108,7 @@ export interface Room {
   height: number;  // mm
 }
 
-export type Tool = 'select' | 'move' | 'rotate' | 'add-panel' | 'add-leg' | 'add-hinge' | 'add-drawer-slide' | 'add-handle';
+
 
 export interface Project {
   name: string;
