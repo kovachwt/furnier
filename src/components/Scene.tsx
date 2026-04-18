@@ -232,6 +232,16 @@ export function Scene() {
         maxDistance={15}
         maxPolarAngle={Math.PI / 2 + 0.1}
         target={[0, 1, 0]}
+        // Touch-friendly configuration:
+        // 1-finger = orbit (default), 2-finger = zoom+pan
+        // Smoother damped rotation on touch devices
+        touches={{
+          ONE: 0,          // ROTATE
+          TWO: 2,          // DOLLY_PAN
+        }}
+        rotateSpeed={0.8}
+        zoomSpeed={0.8}
+        panSpeed={0.8}
       />
 
       <KeyboardCameraControls />

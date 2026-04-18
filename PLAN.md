@@ -20,9 +20,9 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 ## Mobile & Touch
 
-- [ ] **Touch-friendly gizmo** for phones/tablets
-- [ ] **Pinch-to-zoom / two-finger orbit** polish
-- [ ] **Responsive sidebar** (collapsible, bottom-sheet on narrow screens)
+- [x] **Touch-friendly gizmo** for phones/tablets
+- [x] **Pinch-to-zoom / two-finger orbit** polish
+- [x] **Responsive sidebar** (collapsible, bottom-sheet on narrow screens)
 - [ ] **Save-to-home-screen PWA** with offline cache
 
 ## Furniture Templates

@@ -10,6 +10,7 @@ import { PanelMesh } from './PanelMesh';
 import { LegMesh } from './LegMesh';
 import { HardwareMesh } from './HardwareMesh';
 import { snapToGrid, collectSnapTargets, snapPieceToFaces } from '../../utils/snap';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface Props {
   piece: FurniturePiece;
@@ -78,6 +79,12 @@ export function FurniturePieceMesh({ piece }: Props) {
   const isSelected = selectedPieceId === piece.id;
   const hasComponentSelected = isSelected && selectedComponentId != null &&
     piece.components.some(c => c.id === selectedComponentId);
+  const isMobile = useIsMobile();
+
+  // Larger gizmo scale on touch so the handles are easy to grab.
+  const pieceGizmoScale = isMobile ? 0.65 : 0.4;
+  const compGizmoScale = isMobile ? 0.4 : 0.25;
+
   const canTransformPiece = isSelected && !hasComponentSelected && !explodedView;
   const canTransformComponent = isSelected && hasComponentSelected && !explodedView && !piece.locked;
 
@@ -339,8 +346,8 @@ export function FurniturePieceMesh({ piece }: Props) {
               <PivotControls
                 anchor={[0, 0, 0]}
                 depthTest={false}
-                scale={0.25}
-                lineWidth={2}
+                scale={compGizmoScale}
+                lineWidth={isMobile ? 3 : 2}
                 autoTransform={false}
                 onDragStart={handleCompDragStart}
                 onDrag={handleCompDrag}
@@ -384,8 +391,8 @@ export function FurniturePieceMesh({ piece }: Props) {
       <PivotControls
         anchor={[0, 0, 0]}
         depthTest={false}
-        scale={0.4}
-        lineWidth={2}
+        scale={pieceGizmoScale}
+        lineWidth={isMobile ? 3 : 2}
         autoTransform={false}
         onDragStart={handleDragStart}
         onDrag={handleDrag}

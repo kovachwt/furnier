@@ -9,7 +9,9 @@ import { ProjectActions } from './components/ui/ProjectActions';
 import { CutListView } from './components/cutlist/CutListView';
 import { ShareImportDialog } from './components/ui/ShareDialog';
 import { KeyboardShortcuts } from './components/ui/KeyboardShortcuts';
+import { MobileControls } from './components/ui/MobileControls';
 import { useStore } from './store/useStore';
+import { useIsNarrow } from './hooks/useIsMobile';
 
 export default function App() {
   const [showCutList, setShowCutList] = useState(false);
@@ -123,54 +125,115 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [showShortcuts]);
 
+  const isNarrow = useIsNarrow();
+
+  // On narrow screens the sidebar becomes a bottom sheet; it starts
+  // collapsed so the viewport is maximised.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="app">
+    <div className={`app ${isNarrow ? 'app--narrow' : 'app--wide'}`}>
       <Toolbar />
 
       <div className="main-area">
-        {/* Left sidebar */}
-        <div className="sidebar left-sidebar">
-          <ProjectActions />
-          <RoomSettings />
+        {!isNarrow ? (
+          /* ── Desktop: traditional left sidebar ── */
+          <div className="sidebar left-sidebar">
+            <ProjectActions />
+            <RoomSettings />
 
-          <div className="tab-bar">
-            <button
-              className={`tab ${sidebarTab === 'add' ? 'active' : ''}`}
-              onClick={() => setSidebarTab('add')}
-            >
-              + Add
-            </button>
-            <button
-              className={`tab ${sidebarTab === 'edit' ? 'active' : ''}`}
-              onClick={() => setSidebarTab('edit')}
-            >
-              ✎ Edit
-            </button>
+            <div className="tab-bar">
+              <button
+                className={`tab ${sidebarTab === 'add' ? 'active' : ''}`}
+                onClick={() => setSidebarTab('add')}
+              >
+                + Add
+              </button>
+              <button
+                className={`tab ${sidebarTab === 'edit' ? 'active' : ''}`}
+                onClick={() => setSidebarTab('edit')}
+              >
+                ✎ Edit
+              </button>
+            </div>
+
+            {sidebarTab === 'add' && (
+              <>
+                <AddFurniture />
+              </>
+            )}
+
+            {sidebarTab === 'edit' && (
+              <>
+                <PieceList />
+                <PieceEditor />
+              </>
+            )}
+
+            <div className="panel-section">
+              <button className="btn-primary full-width" onClick={() => setShowCutList(true)}>
+                📋 Cut List & Parts
+              </button>
+            </div>
           </div>
-
-          {sidebarTab === 'add' && (
-            <>
-              <AddFurniture />
-            </>
-          )}
-
-          {sidebarTab === 'edit' && (
-            <>
-              <PieceList />
-              <PieceEditor />
-            </>
-          )}
-
-          <div className="panel-section">
-            <button className="btn-primary full-width" onClick={() => setShowCutList(true)}>
-              📋 Cut List & Parts
+        ) : (
+          /* ── Mobile: bottom sheet ── */
+          <div className={`bottom-sheet ${sidebarOpen ? 'bottom-sheet--open' : 'bottom-sheet--collapsed'}`}>
+            {/* Drag handle */}
+            <button
+              className="bottom-sheet-handle"
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label={sidebarOpen ? 'Collapse panel' : 'Expand panel'}
+            >
+              <span className="bottom-sheet-handle-bar" />
             </button>
+
+            <div className="bottom-sheet-content">
+              <div className="tab-bar">
+                <button
+                  className={`tab ${sidebarTab === 'add' ? 'active' : ''}`}
+                  onClick={() => { setSidebarTab('add'); setSidebarOpen(true); }}
+                >
+                  + Add
+                </button>
+                <button
+                  className={`tab ${sidebarTab === 'edit' ? 'active' : ''}`}
+                  onClick={() => { setSidebarTab('edit'); setSidebarOpen(true); }}
+                >
+                  ✎ Edit
+                </button>
+              </div>
+
+              {sidebarTab === 'add' && (
+                <>
+                  <ProjectActions />
+                  <AddFurniture />
+                </>
+              )}
+
+              {sidebarTab === 'edit' && (
+                <>
+                  <PieceList />
+                  <PieceEditor />
+                </>
+              )}
+
+              <RoomSettings />
+
+              <div className="panel-section">
+                <button className="btn-primary full-width" onClick={() => setShowCutList(true)}>
+                  📋 Cut List & Parts
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 3D Viewport */}
         <div className="viewport">
           <Scene />
+          {/* On-screen controls overlay for touch devices */}
+          <MobileControls />
         </div>
       </div>
 

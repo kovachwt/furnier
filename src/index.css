@@ -1258,3 +1258,323 @@ html, body, #root {
   padding: 8px 24px;
   font-size: 13px;
 }
+
+/* ═══════════════════════════════════════════════════
+   Mobile / responsive — bottom-sheet sidebar + controls
+   ═══════════════════════════════════════════════════ */
+
+/* ── On-screen nudging D-pad (touch devices) ── */
+
+.mobile-controls {
+  position: absolute;
+  bottom: 80px;
+  left: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-nudge-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 4px 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.nudge-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nudge-row-depth {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.nudge-btn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.1s;
+  touch-action: manipulation;
+}
+
+.nudge-btn:active {
+  background: var(--accent);
+  color: white;
+  transform: scale(0.92);
+}
+
+.nudge-center {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.nudge-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 42px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ── Mobile action bar (rotate, up, delete) ── */
+
+.mobile-action-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.mobile-action-btn {
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.mobile-action-btn:active {
+  background: var(--accent);
+  color: white;
+  transform: scale(0.95);
+}
+
+.mobile-action-btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.mobile-action-btn--danger:active {
+  background: var(--danger);
+  color: white;
+}
+
+/* ── Bottom sheet (narrow screens) ── */
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 56px;          /* collapsed: handle bar only */
+  overflow: hidden;
+}
+
+.bottom-sheet--open {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.bottom-sheet-handle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bottom-sheet-handle-bar {
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.bottom-sheet-content {
+  padding: 0 16px 24px;
+}
+
+.bottom-sheet-content .panel-section {
+  padding: 8px 0;
+}
+
+/* Override sidebar inside bottom-sheet so it doesn't have border-right etc. */
+.bottom-sheet .panel-section {
+  border-bottom: none;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* ════════════════════════════════════════
+   Narrow-screen overrides (≤ 767px)
+   ════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  /* ── Layout: stack toolbar + full-width viewport ── */
+
+  .app {
+    flex-direction: column;
+  }
+
+  .toolbar {
+    /* Shrink toolbar: hide button labels, keep icons */
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 6px;
+  }
+
+  .tool-btn {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .tool-btn .tool-icon {
+    font-size: 13px;
+  }
+
+  /* Hide the tool-separator lines on cramped screens */
+  .tool-separator {
+    height: 18px;
+    margin: 0 3px;
+  }
+
+  .main-area {
+    /* The bottom sheet is position:fixed so the viewport fills the flex area */
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .left-sidebar {
+    display: none;   /* replaced by bottom sheet */
+  }
+
+  .viewport {
+    flex: 1;
+  }
+
+  /* ── Shortcuts hint: move up above bottom-sheet ── */
+  .shortcuts-hint-btn {
+    bottom: 68px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  /* ── Mobile controls visible ── */
+  .mobile-controls {
+    display: flex;
+  }
+
+  /* ── Modals: full-width on mobile ── */
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal-content {
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .shortcuts-dialog {
+    max-width: 100%;
+    border-radius: 0;
+    margin-top: 0;
+  }
+
+  .shortcuts-body {
+    grid-template-columns: 1fr;
+  }
+
+  .share-dialog,
+  .room-settings-dialog {
+    margin-top: 10vh;
+    border-radius: 12px;
+  }
+
+  /* ── Cut list modal fills screen ── */
+  .cutlist-modal .modal-content {
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  /* ── Room settings: full-width ── */
+  .room-settings-dialog {
+    max-width: 100%;
+  }
+}
+
+/* Desktop: hide mobile controls */
+@media (min-width: 768px) {
+  .mobile-controls {
+    display: none;
+  }
+
+  .bottom-sheet {
+    display: none;
+  }
+}
+
+/* ── Touch device adjustments (pointer: coarse) ── */
+@media (pointer: coarse) {
+  .mobile-controls {
+    display: flex;
+  }
+
+  /* Larger hit targets for toolbar buttons on touch */
+  .tool-btn {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  .form-row input[type="number"],
+  .form-row input[type="text"],
+  .form-row select {
+    min-height: 36px;
+  }
+
+  .tab {
+    min-height: 40px;
+  }
+
+  .piece-item {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    min-height: 36px;
+  }
+}

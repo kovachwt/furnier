@@ -18,14 +18,27 @@
 const fs = require('fs');
 const { PNG } = require('pngjs');
 
-// The app layout is fixed: 280px sidebar on the left + a toolbar on top.
-// We sample a central slice of the 3D viewport so sidebar/toolbar
-// content (which is always non-trivial) can't mask a broken viewport.
+// The app layout varies: on desktop there's a 280px sidebar on the
+// left + toolbar on top; on mobile the sidebar becomes a bottom
+// sheet and the toolbar is compact.
+//
+// Rather than hardcode absolute pixel ranges, we sample a central
+// rectangle that's always inside the 3D viewport regardless of
+// layout: 30–90% of width, 15–80% of height.
+const CROP_FRAC = {
+  x0: 0.30,
+  y0: 0.15,
+  x1: 0.90,
+  y1: 0.80,
+};
+
+// Legacy absolute crop for backwards compatibility with older tests
+// that pass a viewport-sized crop region explicitly.
 const VIEWPORT_CROP = {
-  x0: 400,   // right of sidebar + padding
-  y0: 120,   // below toolbar + padding
-  x1: 1200,  // inside right edge
-  y1: 800,   // above bottom edge
+  x0: 400,
+  y0: 120,
+  x1: 1200,
+  y1: 800,
 };
 
 // Thresholds. Tuned so the darkest legitimate scene we ship (empty room
@@ -35,15 +48,36 @@ const MIN_UNIQUE_COLORS = 30;       // empty-room on dark theme: ~66; broken vie
 const MAX_NEAR_BLACK_PCT = 85;      // viewport can be dark, but not this dark
 const MIN_MEAN_LUMINANCE = 4;       // below this it's functionally black
 
-function analyzeViewport(pngPath, crop = VIEWPORT_CROP) {
+function analyzeViewport(pngPath, crop) {
   const buf = fs.readFileSync(pngPath);
   const png = PNG.sync.read(buf);
   const { width, height, data } = png;
 
-  const x0 = Math.max(0, Math.min(crop.x0, width));
-  const y0 = Math.max(0, Math.min(crop.y0, height));
-  const x1 = Math.max(x0, Math.min(crop.x1, width));
-  const y1 = Math.max(y0, Math.min(crop.y1, height));
+  // If no crop given (or a crop that's obviously the old absolute
+  // defaults that don't fit a small viewport), compute a relative
+  // crop based on the image dimensions.
+  let x0, y0, x1, y1;
+  if (!crop) {
+    x0 = Math.round(width * CROP_FRAC.x0);
+    y0 = Math.round(height * CROP_FRAC.y0);
+    x1 = Math.round(width * CROP_FRAC.x1);
+    y1 = Math.round(height * CROP_FRAC.y1);
+  } else {
+    // Clamp absolute crop to image bounds
+    x0 = Math.max(0, Math.min(crop.x0, width));
+    y0 = Math.max(0, Math.min(crop.y0, height));
+    x1 = Math.max(x0, Math.min(crop.x1, width));
+    y1 = Math.max(y0, Math.min(crop.y1, height));
+    // If the resulting crop is degenerate (< 10px), fall back to
+    // fractional.  This happens when mobile viewports get the desktop
+    // absolute-crop coordinates.
+    if (x1 - x0 < 10 || y1 - y0 < 10) {
+      x0 = Math.round(width * CROP_FRAC.x0);
+      y0 = Math.round(height * CROP_FRAC.y0);
+      x1 = Math.round(width * CROP_FRAC.x1);
+      y1 = Math.round(height * CROP_FRAC.y1);
+    }
+  }
 
   const colors = new Set();
   let sumL = 0;
