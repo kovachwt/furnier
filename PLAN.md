@@ -75,7 +75,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 - [ ] **Door hinges** — European cup hinges with swing arc visualization
 - [ ] **Drawer-slide library** — full-extension, soft-close, push-to-open variants with specs
-- [ ] **Handles / pulls / knobs** — library with standard center-to-center distances
+- [x] **Handles / pulls / knobs** — knob & pull hardware component with BOM integration ([docs](docs/handle-component.md))
 - [ ] **Hanging rail / closet rod** — diameter + end-bracket hardware
 - [ ] **Shelf pins / KD fittings / cam locks** — countable BOM hardware
 - [ ] **Leveling feet** — visible hardware under cabinets

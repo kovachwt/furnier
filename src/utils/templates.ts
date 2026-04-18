@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import type {
-  FurniturePiece, Panel, Leg, Hinge, DrawerSlide, Vec3, Material,
+  FurniturePiece, Panel, Leg, Hinge, DrawerSlide, Vec3, Material, Handle,
   CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
   FixtureBoxParams, FixtureCylinderParams
 } from '../types';
@@ -207,7 +207,7 @@ export function createDresser(params: DresserParams, materials: Material[]): Fur
   const { width, height, depth, drawerRows } = params;
   const innerW = width - 2 * t;
   const innerH = height - 2 * t;
-  const components: (Panel | DrawerSlide)[] = [];
+  const components: (Panel | DrawerSlide | Handle)[] = [];
 
   // Left side
   components.push(makePanel('Left Side', depth, height, params.materialId, t,
@@ -284,6 +284,18 @@ export function createDresser(params: DresserParams, materials: Material[]): Fur
       position: [(innerW / 2) - 5, yBase + drawerH / 2, 0],
       rotation: [0, 0, 0],
     });
+
+    // Handle on drawer front
+    components.push({
+      id: uuid(),
+      type: 'handle',
+      name: `Pull R${i + 1}`,
+      handleType: 'pull',
+      diameter: 128, // standard center-to-center
+      height: 12,
+      position: [0, yBase + drawerH / 2, depth / 2 + 0.5],
+      rotation: [0, 0, 0],
+    });
   }
 
   return {
@@ -354,6 +366,8 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
   // Doors & hinges
   const hingeInset = 100; // mm from top/bottom edge of door
   const hingeZ = depth / 2 - t;
+  const handleY = height / 2 + 50; // handle height from floor
+  const handleZ = depth / 2 - t / 2;
 
   if (doorCount === 1) {
     // Single door covering the full opening
@@ -379,6 +393,18 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       name: 'Bottom Hinge',
       hingeType: 'concealed',
       position: [hingeX, t + hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+
+    // Handle on the right side of the door
+    components.push({
+      id: uuid(),
+      type: 'handle',
+      name: 'Door Handle',
+      handleType: 'knob',
+      diameter: 25,
+      height: 25,
+      position: [innerW / 2 - 30, handleY, depth / 2 + 1],
       rotation: [0, 0, 0],
     });
   } else {
@@ -434,6 +460,28 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       name: 'Right Bottom Hinge',
       hingeType: 'concealed',
       position: [rightHingeX, t + hingeInset, hingeZ],
+      rotation: [0, 0, 0],
+    });
+
+    // Handles — left door on its right edge, right door on its left edge
+    components.push({
+      id: uuid(),
+      type: 'handle',
+      name: 'Left Door Handle',
+      handleType: 'knob',
+      diameter: 25,
+      height: 25,
+      position: [-(doorW + 1), handleY, depth / 2 + 1],
+      rotation: [0, 0, 0],
+    });
+    components.push({
+      id: uuid(),
+      type: 'handle',
+      name: 'Right Door Handle',
+      handleType: 'knob',
+      diameter: 25,
+      height: 25,
+      position: [(doorW + 1), handleY, depth / 2 + 1],
       rotation: [0, 0, 0],
     });
   }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import type {
-  Component, Panel, Leg, Vec3, FurniturePiece,
+  Component, Panel, Leg, Vec3, FurniturePiece, Handle,
   CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
   FixtureBoxParams, FixtureCylinderParams,
 } from '../../types';
@@ -60,6 +60,20 @@ export function PieceEditor() {
       rotation: [0, 0, 0],
     };
     const id = addComponent(piece.id, leg);
+    if (id) setSelection(piece.id, id);
+  };
+
+  const handleAddHandle = () => {
+    const handle: Omit<Handle, 'id'> = {
+      type: 'handle',
+      name: 'New Handle',
+      handleType: 'knob',
+      diameter: 25,
+      height: 25,
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+    };
+    const id = addComponent(piece.id, handle);
     if (id) setSelection(piece.id, id);
   };
 
@@ -128,6 +142,7 @@ export function PieceEditor() {
         <div className="btn-row" style={{ marginTop: 8 }}>
           <button className="btn-secondary" onClick={handleAddPanel}>+ Panel</button>
           <button className="btn-secondary" onClick={handleAddLeg}>+ Leg</button>
+          <button className="btn-secondary" onClick={handleAddHandle}>+ Handle</button>
         </div>
       )}
 
@@ -576,6 +591,29 @@ function ComponentEditor({
               <option value="tapered">Tapered</option>
               <option value="square">Square</option>
             </select>
+          </div>
+        </>
+      )}
+
+      {component.type === 'handle' && (
+        <>
+          <div className="form-row">
+            <label>Type</label>
+            <select value={component.handleType}
+              onChange={(e) => { update({ handleType: e.target.value } as Partial<Component>); pushHistory(); }}>
+              <option value="knob">Knob</option>
+              <option value="pull">Pull</option>
+            </select>
+          </div>
+          <div className="form-row">
+            <label>{component.handleType === 'knob' ? 'Radius' : 'Width'} (mm)</label>
+            <input type="number" value={component.diameter} step={1} min={5}
+              onChange={(e) => { update({ diameter: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
+          </div>
+          <div className="form-row">
+            <label>Height / Projection (mm)</label>
+            <input type="number" value={component.height} step={1} min={5}
+              onChange={(e) => { update({ height: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
           </div>
         </>
       )}

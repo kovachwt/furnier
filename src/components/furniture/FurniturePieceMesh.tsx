@@ -25,6 +25,7 @@ function getScalableDims(comp: Component): Record<string, number> {
   if (comp.type === 'panel') return { width: comp.width, height: comp.height };
   if (comp.type === 'leg') return { diameter: comp.diameter, height: comp.height };
   if (comp.type === 'drawer-slide') return { length: comp.length };
+  if (comp.type === 'handle') return { diameter: comp.diameter, height: comp.height };
   return {};
 }
 

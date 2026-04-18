@@ -66,7 +66,18 @@ export interface ShelfPin {
   rotation: Vec3;
 }
 
-export type Component = Panel | Leg | Hinge | DrawerSlide | ShelfPin;
+export interface Handle {
+  id: string;
+  type: 'handle';
+  name: string;
+  handleType: 'knob' | 'pull';
+  diameter: number; // mm (knob radius / pull width)
+  height: number; // mm (knob projection / pull height)
+  position: Vec3;
+  rotation: Vec3;
+}
+
+export type Component = Panel | Leg | Hinge | DrawerSlide | ShelfPin | Handle;
 
 export interface ParametricConstraint {
   id: string;
@@ -97,7 +108,7 @@ export interface Room {
   height: number;  // mm
 }
 
-export type Tool = 'select' | 'move' | 'rotate' | 'add-panel' | 'add-leg' | 'add-hinge' | 'add-drawer-slide';
+export type Tool = 'select' | 'move' | 'rotate' | 'add-panel' | 'add-leg' | 'add-hinge' | 'add-drawer-slide' | 'add-handle';
 
 export interface Project {
   name: string;

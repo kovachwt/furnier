@@ -237,6 +237,9 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
         hardwareMap.set(key, (hardwareMap.get(key) ?? 0) + 1);
       } else if (comp.type === 'shelf-pin') {
         hardwareMap.set('shelf pin', (hardwareMap.get('shelf pin') ?? 0) + 1);
+      } else if (comp.type === 'handle') {
+        const key = `${comp.handleType === 'knob' ? 'Knob' : 'Pull'} ${comp.diameter}mm`;
+        hardwareMap.set(key, (hardwareMap.get(key) ?? 0) + 1);
       }
     }
   }
