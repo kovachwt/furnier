@@ -95,7 +95,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 ## Validation & Warnings
 
 - [ ] **Clash detection** — warn when furniture intersects a fixture or wall
-- [ ] **Floor-gap warning** — piece floating unintentionally
+- [x] **Floor-gap warning** — piece floating unintentionally ([docs](docs/floor-gap-warning.md))
 - [ ] **Unreachable-drawer warning** — drawer blocked by pillar / wall / neighbor
 - [ ] **Door-swing clearance check**
 - [ ] **Sheet-size overflow** — panel too big for any sheet in its material

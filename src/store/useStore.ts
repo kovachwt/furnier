@@ -261,6 +261,7 @@ interface AppState {
   snapThreshold: number; // mm
   showDimensions: boolean;
   showDistances: boolean; // show piece-to-wall/neighbor distances
+  showFloorGapWarnings: boolean; // show warnings for pieces floating above floor
   showGrid: boolean;
   showThickness: boolean; // exaggerate panel thickness for visibility
   gridSize: number; // mm
@@ -327,6 +328,7 @@ interface AppState {
   setSnapToFaces: (enabled: boolean) => void;
   setShowDimensions: (show: boolean) => void;
   setShowDistances: (show: boolean) => void;
+  setShowFloorGapWarnings: (show: boolean) => void;
   setShowGrid: (show: boolean) => void;
   setShowThickness: (show: boolean) => void;
   setGridSize: (size: number) => void;
@@ -368,6 +370,7 @@ export const useStore = create<AppState>()(
     snapThreshold: 25,
     showDimensions: true,
     showDistances: false,
+    showFloorGapWarnings: true,
     showGrid: true,
     showThickness: false,
     gridSize: 50,
@@ -706,6 +709,7 @@ export const useStore = create<AppState>()(
     setSnapToFaces: (enabled) => set({ snapToFaces: enabled }),
     setShowDimensions: (show) => set({ showDimensions: show }),
     setShowDistances: (show) => set({ showDistances: show }),
+    setShowFloorGapWarnings: (show) => set({ showFloorGapWarnings: show }),
     setShowGrid: (show) => set({ showGrid: show }),
     setShowThickness: (show) => set({ showThickness: show }),
     setGridSize: (size) => set({ gridSize: size }),

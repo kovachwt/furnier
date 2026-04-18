@@ -308,6 +308,16 @@ html, body, #root {
   background: rgba(74, 158, 255, 0.15);
 }
 
+/* Floating piece warning */
+.piece-item.floating {
+  border-color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.piece-item.floating .piece-comp-count {
+  color: #ff9800;
+}
+
 .piece-comp-count {
   font-size: 10px;
   color: var(--text-secondary);

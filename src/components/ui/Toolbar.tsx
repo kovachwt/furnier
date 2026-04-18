@@ -25,6 +25,8 @@ export function Toolbar() {
   const setShowGrid = useStore((s) => s.setShowGrid);
   const showThickness = useStore((s) => s.showThickness);
   const setShowThickness = useStore((s) => s.setShowThickness);
+  const showFloorGapWarnings = useStore((s) => s.showFloorGapWarnings);
+  const setShowFloorGapWarnings = useStore((s) => s.setShowFloorGapWarnings);
   const explodedView = useStore((s) => s.explodedView);
   const setExplodedView = useStore((s) => s.setExplodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
@@ -99,6 +101,13 @@ export function Toolbar() {
           title="Exaggerate panel thickness for visibility"
         >
           ▥ Thick
+        </button>
+        <button
+          className={`tool-btn ${showFloorGapWarnings ? 'active' : ''}`}
+          onClick={() => setShowFloorGapWarnings(!showFloorGapWarnings)}
+          title="Show warnings for pieces floating above floor"
+        >
+          ⚠ Gap
         </button>
       </div>
 
