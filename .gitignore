@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Visual regression test artifacts (baselines are committed, actual/diff are not)
+playwright/**/actual.png
+playwright/**/diff.png
+
+# Legacy ad-hoc screenshots at the repo root, superseded by playwright/
+furnier-before.png
+furnier-after.png

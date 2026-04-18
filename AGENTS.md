@@ -207,8 +207,26 @@ Every 3D component imports these. Change `S` to change the scale.
 
 ## Testing
 
-No test suite yet. To verify correctness:
+### Visual Regression Tests (Playwright)
+
+The `playwright/` folder holds the visual regression suite. Each test lives in its own subfolder with a `test.cjs` module and a committed `baseline.png`. The runner spins up a dedicated Vite dev server on port 5179 (avoiding collisions with your `npm run dev` on 5173), drives the app with Playwright + Chromium, screenshots the viewport, and diffs against the baseline using pixelmatch.
+
+```bash
+npm run test:visual                      # run all tests
+npm run test:visual -- add-cabinet        # run one test
+npm run test:visual:update                # re-record baselines after intentional UI changes
+```
+
+See `playwright/README.md` for the full layout, adding new tests, thresholds, and failure artifacts (`actual.png` + `diff.png`).
+
+### Ad-hoc UI Testing
+
+`test-furnier.cjs` (+ `test-furnier-instructions.md`) is a single-file Playwright script for exploratory before/after screenshots against the live GitHub Pages build. Useful for quick one-off verification — the `playwright/` suite is the committed regression net.
+
+### Manual Verification
+
 - `npx tsc --noEmit` — type check
 - `npm run build` — full production build
+- `npm run test:visual` — visual regression suite
 - Manual testing in browser: add each template type, verify 3D rendering, open cut list, check sheet layouts look sane
 

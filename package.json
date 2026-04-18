@@ -7,13 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:visual": "node playwright/run.cjs",
+    "test:visual:update": "node playwright/run.cjs --update"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "immer": "^11.1.4",
     "jspdf": "^4.2.0",
+    "playwright": "^1.59.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "three": "^0.183.2",
@@ -32,6 +35,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
