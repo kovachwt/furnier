@@ -19,6 +19,8 @@ export function Toolbar() {
   const setShowDimensions = useStore((s) => s.setShowDimensions);
   const showGrid = useStore((s) => s.showGrid);
   const setShowGrid = useStore((s) => s.setShowGrid);
+  const showThickness = useStore((s) => s.showThickness);
+  const setShowThickness = useStore((s) => s.setShowThickness);
   const explodedView = useStore((s) => s.explodedView);
   const setExplodedView = useStore((s) => s.setExplodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
@@ -77,6 +79,13 @@ export function Toolbar() {
           title="Show dimensions"
         >
           ↔ Dims
+        </button>
+        <button
+          className={`tool-btn ${showThickness ? 'active' : ''}`}
+          onClick={() => setShowThickness(!showThickness)}
+          title="Exaggerate panel thickness for visibility"
+        >
+          ▥ Thick
         </button>
       </div>
 

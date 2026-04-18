@@ -49,7 +49,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Dadoes / rabbets / grooves** — joinery representation with auto cut-depth on BOM
 - [ ] **Mitered edges** — 45° corners rendered and flagged in assembly
 - [ ] **Sloped / angled panels** — arbitrary-angle roof / ramp components
-- [ ] **Panel thickness visualization toggle** — exaggerate thickness for clarity at a glance
+- [x] **Panel thickness visualization toggle** — exaggerate thickness 10× for clarity at a glance ([docs](docs/panel-thickness-toggle.md))
 
 ## Room & Environment
 

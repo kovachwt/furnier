@@ -25,9 +25,11 @@ export function PanelMesh({ panel, pieceId, isSelected, isPieceSelected, isFixtu
   const baseColor = isFixture ? (fixtureColor ?? '#808080') : (mat?.color ?? '#ccbbaa');
   const color = baseColor;
 
+  const showThickness = useStore((s) => s.showThickness);
   const w = mmToWorld(panel.width);
   const h = mmToWorld(panel.height);
-  const d = mmToWorld(panel.depth);
+  // Exaggerate panel thickness 10× for visibility (panels are only 16-25 mm)
+  const d = mmToWorld(showThickness ? Math.max(panel.depth * 10, 5) : panel.depth);
 
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();

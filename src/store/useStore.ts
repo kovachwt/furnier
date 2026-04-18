@@ -259,6 +259,7 @@ interface AppState {
   snapThreshold: number; // mm
   showDimensions: boolean;
   showGrid: boolean;
+  showThickness: boolean; // exaggerate panel thickness for visibility
   gridSize: number; // mm
   sawKerf: number; // mm
 
@@ -315,6 +316,7 @@ interface AppState {
   setSnapToFaces: (enabled: boolean) => void;
   setShowDimensions: (show: boolean) => void;
   setShowGrid: (show: boolean) => void;
+  setShowThickness: (show: boolean) => void;
   setGridSize: (size: number) => void;
   setSawKerf: (kerf: number) => void;
   setExplodedView: (enabled: boolean) => void;
@@ -349,6 +351,7 @@ export const useStore = create<AppState>()(
     snapThreshold: 25,
     showDimensions: true,
     showGrid: true,
+    showThickness: false,
     gridSize: 50,
     sawKerf: 3,
 
@@ -681,6 +684,7 @@ export const useStore = create<AppState>()(
     setSnapToFaces: (enabled) => set({ snapToFaces: enabled }),
     setShowDimensions: (show) => set({ showDimensions: show }),
     setShowGrid: (show) => set({ showGrid: show }),
+    setShowThickness: (show) => set({ showThickness: show }),
     setGridSize: (size) => set({ gridSize: size }),
     setSawKerf: (kerf) => set({ sawKerf: kerf }),
     setExplodedView: (enabled) => set({ explodedView: enabled }),
