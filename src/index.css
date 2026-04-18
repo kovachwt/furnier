@@ -421,6 +421,37 @@ html, body, #root {
   min-width: 28px;
 }
 
+/* Camera presets */
+.camera-presets-group {
+  display: flex;
+  gap: 2px;
+}
+
+.camera-preset-btn {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.camera-preset-btn:hover {
+  background: var(--bg-hover);
+}
+
+.camera-preset-btn.active {
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.15);
+}
+
 /* Template params section */
 .template-params-section {
   margin-top: 12px;

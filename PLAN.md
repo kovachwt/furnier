@@ -149,7 +149,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Context menu** on right-click (duplicate, delete, lock, bring-to-front of a stack)
 - [x] **Piece search / filter** in the piece list ([docs](docs/piece-search-filter.md))
 - [ ] **Layers / groups** — organize pieces into named groups that can be hidden/locked
-- [ ] **Camera presets** — save named views; front/side/top/iso buttons
+- [x] **Camera presets** — save named views; front/side/top/iso buttons ([docs](docs/camera-presets.md))
 - [ ] **Walk-through mode** — FPS-style camera at eye height
 - [ ] **First-time tutorial / onboarding tour**
 - [ ] **Dark/light theme toggle**

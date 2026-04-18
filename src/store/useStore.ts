@@ -254,6 +254,8 @@ interface AppState {
   selectedPieceId: string | null;
   selectedComponentId: string | null;
   activeTool: Tool;
+  activeCameraPreset: string;
+  cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
   snapEnabled: boolean;
   snapToFaces: boolean;
   snapThreshold: number; // mm
@@ -312,6 +314,8 @@ interface AppState {
 
   // Tools & toggles
   setActiveTool: (tool: Tool) => void;
+  setActiveCameraPreset: (preset: string) => void;
+  setCameraTarget: (position: [number, number, number], target: [number, number, number]) => void;
   setSnapEnabled: (enabled: boolean) => void;
   setSnapToFaces: (enabled: boolean) => void;
   setShowDimensions: (show: boolean) => void;
@@ -346,6 +350,8 @@ export const useStore = create<AppState>()(
     selectedPieceId: null,
     selectedComponentId: null,
     activeTool: 'select',
+    activeCameraPreset: 'iso',
+    cameraTarget: null,
     snapEnabled: true,
     snapToFaces: true,
     snapThreshold: 25,
@@ -680,6 +686,8 @@ export const useStore = create<AppState>()(
     },
 
     setActiveTool: (tool) => set({ activeTool: tool }),
+    setActiveCameraPreset: (preset) => set({ activeCameraPreset: preset }),
+    setCameraTarget: (position, target) => set({ cameraTarget: { position, target } }),
     setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),
     setSnapToFaces: (enabled) => set({ snapToFaces: enabled }),
     setShowDimensions: (show) => set({ showDimensions: show }),

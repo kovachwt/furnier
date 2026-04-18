@@ -1,5 +1,6 @@
 import { useStore } from '../../store/useStore';
 import type { Tool } from '../../types';
+import { CameraPresets } from './CameraPresets';
 
 const tools: { id: Tool; label: string; icon: string }[] = [
   { id: 'select', label: 'Select', icon: '⇱' },
@@ -113,6 +114,10 @@ export function Toolbar() {
           </div>
         )}
       </div>
+
+      <div className="tool-separator" />
+
+      <CameraPresets />
     </div>
   );
 }

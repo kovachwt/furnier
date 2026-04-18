@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore';
 import { RoomBox, mmToWorld } from './room/RoomBox';
 import { FurniturePieceMesh } from './furniture/FurniturePieceMesh';
 import { KeyboardCameraControls } from './KeyboardCameraControls';
+import { CameraAnimator } from './CameraAnimator';
 
 function SnapGuides() {
   const activeSnapLines = useStore((s) => s.activeSnapLines);
@@ -95,6 +96,7 @@ export function Scene() {
       />
 
       <KeyboardCameraControls />
+      <CameraAnimator />
     </Canvas>
   );
 }
