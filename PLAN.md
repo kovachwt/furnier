@@ -109,7 +109,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Blade/kerf per material** instead of a single global kerf
 - [ ] **Multiple sheet sources** — some material from a 2440×1220, some from an offcut
 - [ ] **Manual override** — drag a panel to a different sheet in the layout preview
-- [ ] **Waste report** — total m², total cost, pie chart per material
+- [x] **Waste report** — total m², total cost, pie chart per material ([docs](docs/waste-report.md))
 - [x] **Export cut list as CSV / DXF / OptiCutter XML** ([docs](docs/csv-export.md))
 - [ ] **Solid-wood cut list** — length-only 1D packing for rails, trim, stretchers
 

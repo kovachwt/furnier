@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
-import { generateCutList, generateBOM, generateCutListCSV, downloadCSV, generateEdgeBandingEstimate, findSheetOverflow } from '../../utils/cutlist';
+import { generateCutList, generateBOM, generateCutListCSV, downloadCSV, generateEdgeBandingEstimate, findSheetOverflow, generateWasteReport } from '../../utils/cutlist';
 import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
@@ -19,6 +19,7 @@ export function CutListView({ onClose }: { onClose: () => void }) {
   const bom = useMemo(() => generateBOM(pieces, materials), [pieces, materials]);
   const edgeBanding = useMemo(() => generateEdgeBandingEstimate(pieces), [pieces]);
   const sheetOverflow = useMemo(() => findSheetOverflow(pieces, materials), [pieces, materials]);
+  const wasteReport = useMemo(() => generateWasteReport(pieces, materials, sawKerf), [pieces, materials, sawKerf]);
 
   const handleExportPDF = useCallback(() => {
     exportProjectPDF(projectName, layouts, bom, pieces, materials, sawKerf);
@@ -86,6 +87,37 @@ export function CutListView({ onClose }: { onClose: () => void }) {
                 <div key={i}>{p.pieceName} / {p.panelName}: {p.width}×{p.height}mm</div>
               ))}
             </div>
+          )}
+
+          {/* Waste report */}
+          {wasteReport.length > 0 && (
+            <>
+              <h3 style={{ marginTop: 24 }}>Material Waste</h3>
+              <table className="bom-table">
+                <thead>
+                  <tr>
+                    <th>Material</th>
+                    <th>Sheets</th>
+                    <th>Total Area (m²)</th>
+                    <th>Used (m²)</th>
+                    <th>Waste (m²)</th>
+                    <th>Waste %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wasteReport.map((w, i) => (
+                    <tr key={i}>
+                      <td>{w.materialName}</td>
+                      <td>{w.sheetCount}</td>
+                      <td>{w.totalSheetAreaM2}</td>
+                      <td>{w.usedAreaM2}</td>
+                      <td>{w.wasteAreaM2}</td>
+                      <td>{w.wastePercent}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
 
           {/* BOM */}

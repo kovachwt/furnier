@@ -320,6 +320,78 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
 }
 
 /**
+ * Waste report per material.
+ */
+export interface WasteEntry {
+  materialId: string;
+  materialName: string;
+  sheetCount: number;
+  totalSheetAreaM2: number;
+  usedAreaM2: number;
+  wasteAreaM2: number;
+  wastePercent: number;
+}
+
+/**
+ * Generate a waste report aggregated per material.
+ * Uses the sheet layouts to calculate total waste.
+ */
+export function generateWasteReport(
+  pieces: FurniturePiece[],
+  materials: Material[],
+  sawKerf: number
+): WasteEntry[] {
+  const { layouts } = generateCutList(pieces, materials, sawKerf);
+
+  // Aggregate by material
+  const byMaterial = new Map<string, {
+    sheetCount: number;
+    totalSheetArea: number;
+    usedArea: number;
+  }>();
+
+  for (const layout of layouts) {
+    const mat = materials.find(m => m.id === layout.materialId);
+    if (!mat) continue;
+
+    const entry = byMaterial.get(layout.materialId) ?? {
+      sheetCount: 0,
+      totalSheetArea: 0,
+      usedArea: 0,
+    };
+
+    const sheetArea = mat.sheetWidth * mat.sheetHeight;
+    entry.sheetCount++;
+    entry.totalSheetArea += sheetArea;
+
+    // Used area = sum of all panel areas on this sheet
+    for (const placement of layout.placements) {
+      entry.usedArea += placement.piece.width * placement.piece.height;
+    }
+
+    byMaterial.set(layout.materialId, entry);
+  }
+
+  return Array.from(byMaterial.entries()).map(([matId, data]) => {
+    const mat = materials.find(m => m.id === matId);
+    const wasteArea = data.totalSheetArea - data.usedArea;
+    const wastePercent = data.totalSheetArea > 0
+      ? Math.round((wasteArea / data.totalSheetArea) * 1000) / 10 // 1 decimal
+      : 0;
+
+    return {
+      materialId: matId,
+      materialName: mat?.name ?? matId,
+      sheetCount: data.sheetCount,
+      totalSheetAreaM2: Math.round((data.totalSheetArea / 1_000_000) * 100) / 100,
+      usedAreaM2: Math.round((data.usedArea / 1_000_000) * 100) / 100,
+      wasteAreaM2: Math.round((wasteArea / 1_000_000) * 100) / 100,
+      wastePercent,
+    };
+  });
+}
+
+/**
  * Edge-banding side names.
  */
 const SIDE_NAMES = ['top', 'bottom', 'left', 'right'] as const;
