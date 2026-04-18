@@ -27,6 +27,8 @@ export function Toolbar() {
   const setExplodedView = useStore((s) => s.setExplodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
   const setExplodeFactor = useStore((s) => s.setExplodeFactor);
+  const darkTheme = useStore((s) => s.darkTheme);
+  const toggleTheme = useStore((s) => s.toggleTheme);
 
   return (
     <div className="toolbar">
@@ -123,6 +125,16 @@ export function Toolbar() {
       <div className="tool-separator" />
 
       <ScreenshotButton />
+
+      <div className="tool-separator" />
+
+      <button
+        className="tool-btn"
+        onClick={toggleTheme}
+        title={darkTheme ? 'Switch to light theme' : 'Switch to dark theme'}
+      >
+        {darkTheme ? '☀' : '🌙'}
+      </button>
     </div>
   );
 }

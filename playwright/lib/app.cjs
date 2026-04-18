@@ -60,6 +60,19 @@ async function clickToolbarButton(page, labelMatcher) {
   await page.waitForTimeout(600);
 }
 
+async function toggleTheme(page) {
+  // Click the theme toggle button (sun/moon icon) in the toolbar.
+  const toggled = await page.evaluate(() => {
+    const btns = Array.from(document.querySelectorAll('.toolbar button.tool-btn'));
+    const target = btns.find((b) => ['☀', '🌙'].includes((b.textContent || '').trim()));
+    if (!target) return false;
+    target.click();
+    return true;
+  });
+  if (!toggled) throw new Error('Could not find theme toggle button');
+  await page.waitForTimeout(300);
+}
+
 /**
  * Add a piece using one of the built-in templates, with optional
  * parameter overrides. Use for reproducible test scenarios.
@@ -96,6 +109,7 @@ module.exports = {
   selectTemplate,
   clickAdd,
   clickToolbarButton,
+  toggleTheme,
   addPiece,
   SCENE_SETTLE_MS,
 };

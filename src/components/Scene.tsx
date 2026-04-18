@@ -65,7 +65,7 @@ export function Scene() {
       shadows
       camera={{ position: [3, 2.5, 3], fov: 50, near: 0.01, far: 100 }}
       onPointerMissed={clearSelection}
-      style={{ background: '#1a1a2e' }}
+      style={{ background: 'var(--bg-primary)' }}
     >
       <ambientLight intensity={0.5} />
       <directionalLight

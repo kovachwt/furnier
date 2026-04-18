@@ -22,6 +22,19 @@ export default function App() {
     if (selectedPieceId) setSidebarTab('edit');
   }, [selectedPieceId]);
 
+  // Apply theme class to body and persist to localStorage
+  const darkTheme = useStore((s) => s.darkTheme);
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', !darkTheme);
+    localStorage.setItem('furniture-designer-theme', darkTheme ? 'dark' : 'light');
+  }, [darkTheme]);
+
+  // Restore theme from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('furniture-designer-theme');
+    if (saved === 'light') useStore.getState().toggleTheme();
+  }, []);
+
   const toggleShortcuts = useCallback(() => setShowShortcuts((v) => !v), []);
 
   // Keyboard shortcuts

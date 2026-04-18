@@ -152,7 +152,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [x] **Camera presets** — save named views; front/side/top/iso buttons ([docs](docs/camera-presets.md))
 - [ ] **Walk-through mode** — FPS-style camera at eye height
 - [ ] **First-time tutorial / onboarding tour**
-- [ ] **Dark/light theme toggle**
+- [x] **Dark/light theme toggle** ([docs](docs/dark-light-theme.md))
 
 ## Export & Import
 

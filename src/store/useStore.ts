@@ -272,6 +272,9 @@ interface AppState {
   // Viewport capture
   shouldCaptureViewport: boolean;
 
+  // Theme
+  darkTheme: boolean;
+
   // Snap guides
   activeSnapLines: SnapLine[];
 
@@ -330,6 +333,7 @@ interface AppState {
   setExplodeFactor: (factor: number) => void;
   setShouldCaptureViewport: (val: boolean) => void;
   takeScreenshot: () => void;
+  toggleTheme: () => void;
   setActiveSnapLines: (lines: SnapLine[]) => void;
 
   // History
@@ -369,6 +373,7 @@ export const useStore = create<AppState>()(
     explodedView: false,
     explodeFactor: 1.5,
     shouldCaptureViewport: false,
+    darkTheme: true,
     activeSnapLines: [],
 
     history: [],
@@ -705,6 +710,7 @@ export const useStore = create<AppState>()(
     setExplodeFactor: (factor) => set({ explodeFactor: factor }),
     setShouldCaptureViewport: (val) => set({ shouldCaptureViewport: val }),
     takeScreenshot: () => set({ shouldCaptureViewport: true }),
+    toggleTheme: () => set((s) => ({ darkTheme: !s.darkTheme })),
     setActiveSnapLines: (lines) => set({ activeSnapLines: lines }),
 
     pushHistory: () =>
