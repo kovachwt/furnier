@@ -1,5 +1,6 @@
 import { useRef, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
+import { Suspense } from 'react';
 import { PivotControls, Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import type { FurniturePiece, Vec3, Component } from '../../types';
@@ -354,23 +355,26 @@ export function FurniturePieceMesh({ piece }: Props) {
             ) : (
               meshContent
             )}
-            {/* Exploded view label */}
+            {/* Exploded view label. Wrapped in Suspense so the mesh
+                itself doesn't wait for drei's <Text> font fetch. */}
             {explodedView && (
-              <Text
-                position={[
-                  mmToWorld(comp.position[0]),
-                  mmToWorld(comp.position[1]) + mmToWorld(getComponentHeight(comp) / 2 + 40),
-                  mmToWorld(comp.position[2]),
-                ]}
-                fontSize={0.03}
-                color="#ffffff"
-                anchorX="center"
-                anchorY="bottom"
-                outlineWidth={0.003}
-                outlineColor="#000000"
-              >
-                {`${index + 1}. ${comp.name}`}
-              </Text>
+              <Suspense fallback={null}>
+                <Text
+                  position={[
+                    mmToWorld(comp.position[0]),
+                    mmToWorld(comp.position[1]) + mmToWorld(getComponentHeight(comp) / 2 + 40),
+                    mmToWorld(comp.position[2]),
+                  ]}
+                  fontSize={0.03}
+                  color="#ffffff"
+                  anchorX="center"
+                  anchorY="bottom"
+                  outlineWidth={0.003}
+                  outlineColor="#000000"
+                >
+                  {`${index + 1}. ${comp.name}`}
+                </Text>
+              </Suspense>
             )}
           </group>
         );

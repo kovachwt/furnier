@@ -1,4 +1,4 @@
-import { } from 'react';
+import { Suspense } from 'react';
 import { useStore } from '../../store/useStore';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
@@ -65,9 +65,13 @@ export function RoomBox() {
         </lineSegments>
       </group>
 
-      {/* Dimension labels */}
+      {/* Dimension labels. Wrapped in Suspense because drei's <Text>
+          suspends while troika fetches its font — without this boundary
+          the entire RoomBox (floor, walls, grid) stays blank until the
+          font resolves, which can effectively never happen in a
+          sandboxed headless browser with no network. */}
       {showDimensions && (
-        <>
+        <Suspense fallback={null}>
           {/* Width label */}
           <Text
             position={[0, -0.05, d / 2 + 0.15]}
@@ -102,7 +106,7 @@ export function RoomBox() {
           >
             {room.height} mm
           </Text>
-        </>
+        </Suspense>
       )}
     </group>
   );

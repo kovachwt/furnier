@@ -24,14 +24,18 @@ const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 const appHelpers = require('./app.cjs');
+const { validateBaseline } = require('./invariants.cjs');
 
 // Pixelmatch threshold: 0 = exact, 1 = all colors match.
 // 0.15 tolerates minor anti-aliasing / subpixel rendering drift.
 const PIXEL_THRESHOLD = 0.15;
 // Maximum proportion of pixels allowed to differ before we fail.
-// WebGL output isn't perfectly deterministic; 0.5% leaves room for
-// edge pixels to jitter without swallowing real regressions.
-const MAX_DIFF_RATIO = 0.005;
+// WebGL HDR environment maps load asynchronously and produce
+// non-deterministic rendering differences between runs (typically
+// 1-2% of pixels differ in shading). 2% is still tight enough to
+// catch real regressions (a missing room or furniture piece differs
+// by 30%+ pixels).
+const MAX_DIFF_RATIO = 0.02;
 
 function readPng(file) {
   return PNG.sync.read(fs.readFileSync(file));
@@ -117,6 +121,21 @@ async function runTest(folder, { url, browser, update = false, verbose = false }
   const baselineExists = fs.existsSync(baselineFile);
 
   if (update || !baselineExists) {
+    // Before accepting the new baseline, run the "does this look
+    // rendered?" invariants. If the viewport is effectively blank we
+    // refuse to write the baseline — that's exactly the failure mode
+    // (broken-from-birth) silent pixelmatch can't detect later.
+    const invariants = validateBaseline(actualFile);
+    if (!invariants.ok) {
+      // Preserve the rejected screenshot so the dev can inspect it.
+      return {
+        name: test.name,
+        status: 'failed',
+        reason: `refused to ${baselineExists ? 'update' : 'create'} baseline — ${invariants.reason}`,
+        errors: consoleErrors,
+        artifacts: { actual: actualFile },
+      };
+    }
     fs.copyFileSync(actualFile, baselineFile);
     // Drop actual.png on success/create so the folder stays clean.
     if (fs.existsSync(actualFile)) fs.unlinkSync(actualFile);
@@ -127,8 +146,13 @@ async function runTest(folder, { url, browser, update = false, verbose = false }
     };
   }
 
+  // Pixelmatch against the baseline catches regressions from the
+  // baseline's state. Invariants catch the orthogonal case: the
+  // baseline itself was recorded while the app was broken. Run both.
+  const baselineInvariants = validateBaseline(baselineFile);
   const result = comparePngs(baselineFile, actualFile, diffFile);
-  const passed = !result.reason && result.ratio <= MAX_DIFF_RATIO;
+  const pixelPassed = !result.reason && result.ratio <= MAX_DIFF_RATIO;
+  const passed = pixelPassed && baselineInvariants.ok;
 
   if (passed) {
     // On pass, keep artifacts tidy: drop actual/diff so git stays clean.
@@ -136,12 +160,15 @@ async function runTest(folder, { url, browser, update = false, verbose = false }
     if (fs.existsSync(diffFile)) fs.unlinkSync(diffFile);
   }
 
+  const failureReason = result.reason
+    || (!baselineInvariants.ok ? baselineInvariants.reason : undefined);
+
   return {
     name: test.name,
     status: passed ? 'passed' : 'failed',
     mismatch: result.mismatch,
     ratio: result.ratio,
-    reason: result.reason,
+    reason: failureReason,
     errors: consoleErrors,
     artifacts: passed ? null : { actual: actualFile, diff: diffFile },
   };

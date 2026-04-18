@@ -25,7 +25,13 @@ export function ViewportCapture() {
       const projectName = useStore.getState().project.name;
       captureCanvas(gl.domElement, projectName);
     });
-  }, 1); // Priority 1 — runs before the main render pass
+  });
+  // Note: do NOT pass a non-zero priority. In R3F, any useFrame with
+  // priority > 0 disables the automatic render loop — the idea being
+  // that a priority hook takes over rendering manually. That was
+  // exactly our bug: with priority=1 the scene never rendered because
+  // this hook only calls gl.render() when shouldCapture is true.
+  // Default priority 0 keeps auto-rendering enabled.
 
   return null;
 }

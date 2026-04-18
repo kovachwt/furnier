@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Line } from '@react-three/drei';
 import { useStore } from '../store/useStore';
@@ -176,6 +177,15 @@ export function Scene() {
       camera={{ position: [3, 2.5, 3], fov: 50, near: 0.01, far: 100 }}
       onPointerMissed={clearSelection}
       style={{ background: 'var(--bg-primary)' }}
+      // preserveDrawingBuffer keeps the backbuffer available between
+      // frames. Required for:
+      //   • canvas.toDataURL() (used by the in-app Screenshot button)
+      //   • Playwright / CDP screenshots that compose a frame mid-cycle
+      //   • Any headless browser where the compositor may miss the
+      //     most recent WebGL paint
+      // A single-digit-percent perf cost in exchange for a viewport
+      // that's always capturable — worth it for a design tool.
+      gl={{ preserveDrawingBuffer: true }}
     >
       <ambientLight intensity={0.5} />
       <directionalLight
@@ -186,12 +196,29 @@ export function Scene() {
       />
       <directionalLight position={[-3, 4, -3]} intensity={0.3} />
 
-      <Environment preset="apartment" />
+      {/*
+       * Scene contents each run in their own Suspense boundary.
+       *
+       * Why: drei's <Environment> suspends on HDR fetch, and drei's <Text>
+       * (used in RoomBox / PieceDistances / FurniturePieceMesh) suspends
+       * on font fetch. Without isolation, any one suspension blanks the
+       * entire scene subtree — that's the failure mode where the viewport
+       * renders as a flat background color until every async asset
+       * resolves, which can effectively never happen in a sandboxed
+       * headless browser with no network.
+       */}
+      <Suspense fallback={null}>
+        <Environment preset="apartment" />
+      </Suspense>
 
-      <RoomBox />
+      <Suspense fallback={null}>
+        <RoomBox />
+      </Suspense>
 
       {pieces.map((piece) => (
-        <FurniturePieceMesh key={piece.id} piece={piece} />
+        <Suspense key={piece.id} fallback={null}>
+          <FurniturePieceMesh piece={piece} />
+        </Suspense>
       ))}
 
       <SnapGuides />
@@ -210,7 +237,9 @@ export function Scene() {
       <KeyboardCameraControls />
       <CameraAnimator />
       <ViewportCapture />
-      <PieceDistances />
+      <Suspense fallback={null}>
+        <PieceDistances />
+      </Suspense>
     </Canvas>
   );
 }
