@@ -1,20 +1,21 @@
 // Tests the floor-gap warning feature.
-// Adds a cabinet (which sits on the floor, no warning), then lifts it
-// via the editor and verifies the ⚠ warning appears.
+// Adds a desk (which has legs and should sit on the floor),
+// then lifts it via the editor and verifies the ⚠ warning appears.
+// Legless pieces like cabinets may be wall-mounted, so they don't get warnings.
 
 module.exports = {
   name: 'floor-gap-warning',
-  description: 'Floating pieces show ⚠ warning with gap value in piece list',
+  description: 'Floating pieces with legs show ⚠ warning with gap value in piece list',
   viewport: { width: 1280, height: 900 },
   action: async (page, app) => {
-    // Add a cabinet — it sits on the floor, no warning expected
-    await app.addPiece(page, { template: 'cabinet' });
+    // Add a desk — it has legs and sits on the floor, no warning expected
+    await app.addPiece(page, { template: 'desk' });
     await page.waitForTimeout(500);
 
     // Verify no floating warning for a piece on the floor
     const hasInitialFloating = await page.$('.piece-item.floating');
     if (hasInitialFloating) {
-      throw new Error('Cabinet on floor should not have floating warning');
+      throw new Error('Desk on floor should not have floating warning');
     }
 
     // Switch to edit tab to show the piece list and editor
@@ -25,14 +26,14 @@ module.exports = {
     });
     await page.waitForTimeout(300);
 
-    // Click on the cabinet in the piece list to select it
+    // Click on the desk in the piece list to select it
     const pieceItem = await page.$('.piece-item');
     if (pieceItem) {
       await pieceItem.click();
       await page.waitForTimeout(200);
     }
 
-    // Lift the cabinet by setting Y position to 200mm
+    // Lift the desk by setting Y position to 200mm
     // Find the Y input by its label and fill it
     await page.evaluate(() => {
       const labels = document.querySelectorAll('.form-row label');
