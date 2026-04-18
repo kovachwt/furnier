@@ -147,7 +147,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Alignment tools** — align-to-wall, align-centers, distribute-evenly
 - [ ] **Smart guides** — magenta guide lines like Figma for center-alignment with neighbors
 - [ ] **Context menu** on right-click (duplicate, delete, lock, bring-to-front of a stack)
-- [ ] **Piece search / filter** in the piece list
+- [x] **Piece search / filter** in the piece list ([docs](docs/piece-search-filter.md))
 - [ ] **Layers / groups** — organize pieces into named groups that can be hidden/locked
 - [ ] **Camera presets** — save named views; front/side/top/iso buttons
 - [ ] **Walk-through mode** — FPS-style camera at eye height
