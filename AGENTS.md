@@ -119,6 +119,11 @@ Materials are data. Either extend `DEFAULT_MATERIALS` in `store/useStore.ts`, or
 ### Add a parametric constraint
 `FurniturePiece.constraints[]` holds `{ sourceComponentId, sourceProperty, targetComponentId, targetProperty, offset }`. `updateComponent()` auto-applies matching constraints. Users manage them in the "🔗 Constraints" section of `PieceEditor`. They're cleaned up when components are removed or a piece is regenerated.
 
+### R3F rendering gotchas
+- **`useFrame(fn, priority)`**: any non-zero priority **disables the automatic render loop**. Only use priority > 0 if you call `gl.render()` yourself every frame. The default priority 0 keeps auto-rendering enabled. (This was the root cause of the blank-viewport bug — `ViewportCapture` used priority 1, which silently stopped all rendering.)
+- **`<Suspense>` around async drei components**: `<Environment>`, `<Text>`, `<useTexture>`, etc. all suspend on network fetches. Wrap each in its own `<Suspense fallback={null}>` so one suspending asset doesn't blank the entire scene. This is especially important for headless browsers where font/HDR fetches may never resolve.
+- **`preserveDrawingBuffer: true`**: set on `<Canvas gl>` so `canvas.toDataURL()` (screenshot button) and Playwright compositing always see the last frame. Without it the backbuffer is discarded after presentation.
+
 ### Snap system (`utils/snap.ts`)
 - `getAABBHalfExtents()` — rotation-aware half-extents (XYZ Euler order).
 - `collectSnapTargets()` — room walls + all panel faces, including fixtures.
