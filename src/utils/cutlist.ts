@@ -267,3 +267,154 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
 
   return entries;
 }
+
+/**
+ * Export the cut list as a CSV string.
+ * Includes three sheets: Panels, BOM, and Sheet Layouts.
+ */
+export function generateCutListCSV(
+  pieces: FurniturePiece[],
+  materials: Material[],
+  sawKerf: number
+): string {
+  const { layouts, unplaceable } = generateCutList(pieces, materials, sawKerf);
+  const bom = generateBOM(pieces, materials);
+
+  const lines: string[] = [];
+  const sep = ',';
+
+  function csvRow(...fields: (string | number)[]): string {
+    return fields.map(f => {
+      const s = String(f);
+      // Escape quotes and wrap in quotes if contains comma/quote/newline
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(sep);
+  }
+
+  // ── Sheet 1: Panels ──
+  lines.push('Panel Cut List');
+  lines.push(csvRow('Piece Name', 'Panel Name', 'Width (mm)', 'Height (mm)', 'Depth (mm)', 'Material', 'Edge Banding (T/B/L/R)', 'Rotatable'));
+
+  for (const piece of pieces) {
+    if (piece.isFixture) continue;
+    for (const comp of piece.components) {
+      if (comp.type !== 'panel') continue;
+      const panel = comp as Panel;
+      const mat = materials.find(m => m.id === panel.materialId);
+      const eb = [panel.edgeBanding.top, panel.edgeBanding.bottom, panel.edgeBanding.left, panel.edgeBanding.right]
+        .map(e => e ? 'Y' : 'N').join('');
+      lines.push(csvRow(
+        piece.name, panel.name,
+        panel.width, panel.height, panel.depth,
+        mat?.name ?? panel.materialId,
+        eb, 'Yes'
+      ));
+    }
+  }
+
+  // Unplaceable panels
+  if (unplaceable.length > 0) {
+    lines.push(csvRow('', '⚠ Could not fit on any sheet:', '', '', '', '', '', ''));
+    for (const p of unplaceable) {
+      lines.push(csvRow(p.pieceName, p.panelName, p.width, p.height, '', '', '', ''));
+    }
+  }
+
+  // Blank line separator
+  lines.push('');
+
+  // ── Sheet 2: Bill of Materials ──
+  lines.push('Bill of Materials');
+  lines.push(csvRow('Category', 'Item', 'Specification', 'Quantity'));
+
+  for (const entry of bom) {
+    lines.push(csvRow(entry.category, entry.name, entry.specification, entry.quantity));
+  }
+
+  // Sheet totals
+  const sheetCounts = new Map<string, number>();
+  for (const l of layouts) {
+    const mat = materials.find(m => m.id === l.materialId);
+    const key = mat?.name ?? l.materialId;
+    sheetCounts.set(key, (sheetCounts.get(key) ?? 0) + 1);
+  }
+  for (const [name, count] of sheetCounts) {
+    lines.push(csvRow('Sheets', name, '', count));
+  }
+
+  // Blank line separator
+  lines.push('');
+
+  // ── Sheet 3: Sheet Layouts ──
+  lines.push('Sheet Layouts');
+  lines.push(csvRow('Sheet #', 'Material', 'Panel', 'Piece', 'X (mm)', 'Y (mm)', 'Width (mm)', 'Height (mm)', 'Rotated', 'Waste %'));
+
+  for (const layout of layouts) {
+    const mat = materials.find(m => m.id === layout.materialId);
+    for (const placement of layout.placements) {
+      const pw = placement.rotated ? placement.piece.height : placement.piece.width;
+      const ph = placement.rotated ? placement.piece.width : placement.piece.height;
+      lines.push(csvRow(
+        layout.sheetIndex + 1,
+        mat?.name ?? layout.materialId,
+        placement.piece.panelName,
+        placement.piece.pieceName,
+        placement.x, placement.y,
+        pw, ph,
+        placement.rotated ? 'Yes' : 'No',
+        layout.wastePercent
+      ));
+    }
+  }
+
+  // Blank line separator
+  lines.push('');
+
+  // ── Sheet 4: Assembly Order ──
+  lines.push('Assembly Order');
+  lines.push(csvRow('Step', 'Piece', 'Component', 'Type', 'Dimensions (mm)', 'Position (mm)'));
+
+  let step = 1;
+  for (const piece of pieces) {
+    // Panels (sorted bottom-up)
+    const panels = piece.components
+      .filter(c => c.type === 'panel')
+      .sort((a, b) => a.position[1] - b.position[1]) as Panel[];
+    for (const comp of panels) {
+      lines.push(csvRow(step++, piece.name, comp.name, comp.type,
+        `${comp.width}×${comp.height}×${comp.depth}`, comp.position.map(v => Math.round(v)).join(', ')));
+    }
+    // Hardware
+    for (const comp of piece.components) {
+      if (comp.type === 'panel') continue;
+      const dims = comp.type === 'leg'
+        ? `${comp.diameter}mm ø × ${comp.height}mm`
+        : comp.type === 'handle'
+          ? `${comp.diameter}mm`
+          : comp.type === 'drawer-slide'
+            ? `${comp.length}mm`
+            : '';
+      lines.push(csvRow(step++, piece.name, comp.name, comp.type, dims, comp.position.map(v => Math.round(v)).join(', ')));
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Download a CSV string as a file.
+ */
+export function downloadCSV(csv: string, filename: string): void {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

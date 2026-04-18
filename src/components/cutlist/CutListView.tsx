@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
-import { generateCutList, generateBOM } from '../../utils/cutlist';
+import { generateCutList, generateBOM, generateCutListCSV, downloadCSV } from '../../utils/cutlist';
 import { exportProjectPDF } from '../../utils/pdfExport';
 import type { SheetLayout } from '../../types';
 
@@ -22,13 +22,20 @@ export function CutListView({ onClose }: { onClose: () => void }) {
     exportProjectPDF(projectName, layouts, bom, pieces, materials, sawKerf);
   }, [projectName, layouts, bom, pieces, materials, sawKerf]);
 
+  const handleExportCSV = useCallback(() => {
+    const csv = generateCutListCSV(pieces, materials, sawKerf);
+    const safeName = projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    downloadCSV(csv, `${safeName}_cutlist.csv`);
+  }, [projectName, pieces, materials, sawKerf]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content cutlist-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Cut List & Parts</h2>
           <div className="modal-header-actions">
-            <button className="btn-primary" onClick={handleExportPDF}>📄 Export PDF</button>
+            <button className="btn-primary" onClick={handleExportCSV}>📊 CSV</button>
+            <button className="btn-primary" onClick={handleExportPDF}>📄 PDF</button>
             <button className="btn-close" onClick={onClose}>✕</button>
           </div>
         </div>
