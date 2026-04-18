@@ -5,6 +5,7 @@ import {
   estimateShareUrlLength,
   MAX_SAFE_URL_LENGTH,
 } from '../../utils/sharing';
+import { ShareDialog } from './ShareDialog';
 
 export function ProjectActions() {
   const saveProject = useStore((s) => s.saveProject);
@@ -14,6 +15,7 @@ export function ProjectActions() {
   const projectName = project.name;
   const fileRef = useRef<HTMLInputElement>(null);
   const [shareToast, setShareToast] = useState<'copied' | 'error' | 'too-large' | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const handleSave = () => {
     const json = saveProject();
@@ -59,30 +61,33 @@ export function ProjectActions() {
         return;
       }
 
-      const shareUrl = generateShareUrl(project);
+      const url = generateShareUrl(project);
+      setShareUrl(url);
 
-      // Try native share on mobile, fall back to clipboard
+      // Try native share on mobile, fall back to showing dialog
       if (navigator.share) {
         try {
           await navigator.share({
             title: projectName,
             text: `Check out my furniture design: ${projectName}`,
-            url: shareUrl,
+            url,
           });
-          return; // native share handled it
+          setShareToast('copied');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
         } catch {
-          // User cancelled or API not supported — fall through to clipboard
+          // User cancelled or API not supported — fall through to dialog
         }
       }
-
-      await navigator.clipboard.writeText(shareUrl);
-      setShareToast('copied');
-      setTimeout(() => setShareToast(null), 3000);
     } catch (err) {
       console.error('Share failed:', err);
       setShareToast('error');
       setTimeout(() => setShareToast(null), 4000);
     }
+  };
+
+  const closeShareDialog = () => {
+    setShareUrl(null);
   };
 
   return (
@@ -120,6 +125,13 @@ export function ProjectActions() {
         style={{ display: 'none' }}
         onChange={handleFile}
       />
+      {shareUrl && (
+        <ShareDialog
+          shareUrl={shareUrl}
+          projectName={projectName}
+          onClose={closeShareDialog}
+        />
+      )}
     </div>
   );
 }

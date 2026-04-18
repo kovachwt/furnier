@@ -7,7 +7,7 @@ import { PieceList } from './components/ui/PieceList';
 import { PieceEditor } from './components/ui/PieceEditor';
 import { ProjectActions } from './components/ui/ProjectActions';
 import { CutListView } from './components/cutlist/CutListView';
-import { ShareDialog } from './components/ui/ShareDialog';
+import { ShareImportDialog } from './components/ui/ShareDialog';
 import { KeyboardShortcuts } from './components/ui/KeyboardShortcuts';
 import { useStore } from './store/useStore';
 
@@ -163,7 +163,7 @@ export default function App() {
 
       {showCutList && <CutListView onClose={() => setShowCutList(false)} />}
       {showShortcuts && <KeyboardShortcuts onClose={toggleShortcuts} />}
-      <ShareDialog />
+      <ShareImportDialog />
 
       <button
         className="shortcuts-hint-btn"

@@ -1,20 +1,73 @@
 import { useEffect, useState } from 'react';
+import { QRCodeCanvas } from './QRCode';
+import { useStore } from '../../store/useStore';
 import type { Project } from '../../types';
 import {
   decompressProject,
   getShareFromHash,
   clearShareHash,
 } from '../../utils/sharing';
-import { useStore } from '../../store/useStore';
+
+interface ShareDialogProps {
+  shareUrl: string;
+  projectName: string;
+  onClose: () => void;
+}
+
+/**
+ * Modal that displays the share URL with a QR code for easy mobile access.
+ */
+export function ShareDialog({ shareUrl, projectName, onClose }: ShareDialogProps) {
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="share-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="share-dialog-icon">🔗</div>
+        <h3>Share This Design</h3>
+        <p className="share-dialog-desc">
+          Scan the QR code with your phone or copy the link below.
+        </p>
+        <div className="share-dialog-qr">
+          <QRCodeCanvas value={shareUrl} size={180} />
+        </div>
+        <div className="share-dialog-url">
+          <code>{shareUrl.length > 120 ? shareUrl.slice(0, 120) + '…' : shareUrl}</code>
+        </div>
+        <div className="share-dialog-actions">
+          <button className="btn-secondary" onClick={onClose}>
+            Close
+          </button>
+          <button className="btn-primary" onClick={handleCopy}>
+            📋 Copy Link
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Checks URL hash on mount. If a #share= link is found,
  * shows a confirmation dialog before loading.
  */
-export function ShareDialog() {
+export function ShareImportDialog() {
   const [sharedProject, setSharedProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const encoded = getShareFromHash();
     if (!encoded) return;

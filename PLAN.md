@@ -128,7 +128,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Version history** beyond undo/redo — named snapshots
 - [ ] **Compare two designs** side-by-side (same room, two layouts)
 - [ ] **Short share links** via optional URL shortener (still keep hash-only privacy as default)
-- [ ] **QR code for share URL** (useful on phone / tablet during the build)
+- [x] **QR code for share URL** (useful on phone / tablet during the build) ([docs](docs/qr-code-share.md))
 - [ ] **Export/import project bundle** (.furnier.zip) containing project + custom materials + images
 
 ## AI / Assistance

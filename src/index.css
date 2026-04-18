@@ -812,6 +812,43 @@ html, body, #root {
   margin-bottom: 16px;
 }
 
+.share-dialog-qr {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: var(--radius);
+}
+
+.qr-code-canvas {
+  display: block;
+  border-radius: 4px;
+}
+
+.qr-code-error {
+  padding: 40px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.share-dialog-url {
+  margin-bottom: 18px;
+  word-break: break-all;
+}
+
+.share-dialog-url code {
+  display: block;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
 .share-dialog-info {
   text-align: left;
   background: var(--bg-input);
