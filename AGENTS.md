@@ -12,7 +12,7 @@ See **[PLAN.md](./PLAN.md)** for the (long) wish list of nice-to-have features t
 
 Live at **https://kovachwt.github.io/furnier/**. Auto-deployed via `.github/workflows/deploy.yml` on every push to `main` (`npm ci && npm run build`, then publish `dist/` to GitHub Pages). `vite.config.ts` sets `base: '/furnier/'` so asset paths resolve under the repo subpath.
 
-**Always commit after changes** so they can be tested on GH Pages immediately.
+**You MUST commit AND push after every change.** Do not stop at `git commit` — always run `git push` as well. Deployments only trigger on push, so an unpushed commit means your changes are not live and not testable on GH Pages. Do not forget this.
 
 ## Build & Run
 
