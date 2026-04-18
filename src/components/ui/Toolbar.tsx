@@ -1,4 +1,5 @@
 import { useStore } from '../../store/useStore';
+import { useIsNarrow } from '../../hooks/useIsMobile';
 import { CameraPresets } from './CameraPresets';
 import { ScreenshotButton } from './ScreenshotButton';
 
@@ -24,8 +25,13 @@ export function Toolbar() {
   const darkTheme = useStore((s) => s.darkTheme);
   const toggleTheme = useStore((s) => s.toggleTheme);
 
-  return (
-    <div className="toolbar">
+  const isNarrow = useIsNarrow();
+
+  // On narrow screens, wrap the toolbar buttons in a scrollable strip.
+  // Outer `.toolbar` gets max-height for 2 rows; inner `.toolbar-scroll`
+  // scrolls horizontally when items overflow.
+  const content = (
+    <>
       <div className="tool-group">
         <button className="tool-btn" onClick={undo} title="Undo (Ctrl+Z)">↩ Undo</button>
         <button className="tool-btn" onClick={redo} title="Redo (Ctrl+Y)">↪ Redo</button>
@@ -120,6 +126,22 @@ export function Toolbar() {
       >
         {darkTheme ? '☀' : '🌙'}
       </button>
+    </>
+  );
+
+  // On narrow screens we wrap the content in a horizontally-scrollable
+  // strip so the toolbar never exceeds 2 rows in height.
+  if (isNarrow) {
+    return (
+      <div className="toolbar">
+        <div className="toolbar-scroll">{content}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="toolbar">
+      {content}
     </div>
   );
 }

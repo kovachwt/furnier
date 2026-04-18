@@ -63,6 +63,26 @@ html, body, #root {
   flex-shrink: 0;
 }
 
+/* Inner scrollable wrapper used on mobile */
+.toolbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 72px;          /* 2 rows of compact buttons */
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Hide scrollbar but keep horizontal scroll on mobile strip */
+.toolbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+.toolbar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .tool-group {
   display: flex;
   gap: 2px;
@@ -1446,25 +1466,44 @@ html, body, #root {
   }
 
   .toolbar {
-    /* Shrink toolbar: hide button labels, keep icons */
-    flex-wrap: wrap;
-    gap: 2px;
+    /* Constrain mobile toolbar to 2 rows of compact buttons */
     padding: 4px 6px;
+    overflow: hidden;        /* clip anything beyond the scroll area */
+  }
+
+  /* The inner scroll strip wraps to 2 rows max then scrolls horizontally */
+  .toolbar-scroll {
+    max-height: 72px;       /* 2 rows × ~36px */
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: wrap;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tool-btn {
-    padding: 4px 6px;
+    padding: 4px 8px;
     font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;     /* buttons never collapse – scroll instead */
   }
 
   .tool-btn .tool-icon {
     font-size: 13px;
   }
 
-  /* Hide the tool-separator lines on cramped screens */
   .tool-separator {
     height: 18px;
     margin: 0 3px;
+    flex-shrink: 0;
+  }
+
+  .tool-group {
+    flex-shrink: 0;
+  }
+
+  .camera-presets-group,
+  .explode-slider {
+    flex-shrink: 0;
   }
 
   .main-area {
