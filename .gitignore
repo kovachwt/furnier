@@ -27,6 +27,3 @@ dist-ssr
 playwright/**/actual.png
 playwright/**/diff.png
 
-# Legacy ad-hoc screenshots at the repo root, superseded by playwright/
-furnier-before.png
-furnier-after.png

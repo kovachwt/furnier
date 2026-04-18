@@ -4,15 +4,15 @@
 
 A frontend-only SPA for designing custom furniture in 3D, built with React + Three.js (via React Three Fiber). Users place parametric furniture (cabinets, desks, dressers, bookshelves) and room fixtures (pillars, radiators, appliances) inside a configurable room, edit individual panels and hardware, then generate cut lists, sheet layouts, a bill of materials, and assembly instructions.
 
-No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON. Projects can also be shared via URL — the entire project is compressed into the URL hash fragment.
+No backend. All state lives in Zustand, persisted to localStorage, exportable as JSON, and shareable via a deflate-compressed URL hash fragment.
+
+See **[PLAN.md](./PLAN.md)** for the (long) wish list of nice-to-have features that are on the table but not committed.
 
 ## Deployment
 
-Live at **https://kovachwt.github.io/furnier/**
+Live at **https://kovachwt.github.io/furnier/**. Auto-deployed via `.github/workflows/deploy.yml` on every push to `main` (`npm ci && npm run build`, then publish `dist/` to GitHub Pages). `vite.config.ts` sets `base: '/furnier/'` so asset paths resolve under the repo subpath.
 
-Auto-deployed via GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`. The workflow runs `npm ci && npm run build` and deploys the `dist/` folder to GitHub Pages.
-
-The Vite config sets `base: '/furnier/'` so asset paths resolve correctly under the repo subpath.
+**Always commit after changes** so they can be tested on GH Pages immediately.
 
 ## Build & Run
 
@@ -20,213 +20,141 @@ The Vite config sets `base: '/furnier/'` so asset paths resolve correctly under 
 npm install
 npm run dev          # dev server on :5173
 npm run build        # production build to dist/
-npx tsc --noEmit     # type check without emitting
+npx tsc --noEmit     # type check
+npm run test:visual  # Playwright visual regression suite
 ```
 
-IMPORTANT: always commit to git after making changes, so that the changes can immediately be tested on GH pages.
-
-## Architecture Overview
+## Architecture
 
 ```
 src/
-  types/index.ts        ← All TypeScript types (the single source of truth for data shapes)
-  store/useStore.ts     ← Zustand store: all state + actions + undo/redo + localStorage persistence
+  types/index.ts        ← All TypeScript types (single source of truth for data shapes)
+  store/useStore.ts     ← Zustand store: state + actions + undo/redo + localStorage persistence
   utils/
-    templates.ts        ← Parametric generators: createCabinet(), createBookshelf(), createDesk(), createDresser(), createFixtureBox(), createFixtureCylinder()
-    cutlist.ts          ← Guillotine bin-packing algorithm + BOM generation
-    snap.ts             ← Grid snap + snap-to-face + snap-to-target helpers
+    templates.ts        ← Parametric generators: createCabinet, createBookshelf, createDesk,
+                          createDresser, createFixtureBox, createFixtureCylinder
+    cutlist.ts          ← Guillotine bin-packing + BOM generation
+    snap.ts             ← Grid snap + snap-to-face helpers
     pdfExport.ts        ← PDF generation (cut list, BOM, assembly) via jsPDF
-    sharing.ts          ← URL-based project sharing (compress/decompress via fflate)
+    sharing.ts          ← URL-based project sharing (deflate via fflate)
   components/
     Scene.tsx           ← R3F Canvas with lighting, camera, OrbitControls, SnapGuides
-    room/               ← Room geometry (walls, floor, grid, labels)
-    furniture/          ← 3D meshes for panels, legs, hardware (+ exploded view animation)
-    ui/                 ← Sidebar panels (toolbar, forms, editors, piece list, constraints, share dialog)
-    cutlist/            ← Cut list modal (sheet diagrams, BOM table, assembly notes, PDF export)
+    room/RoomBox.tsx    ← Walls, floor, grid, labels, scale constants
+    furniture/          ← PanelMesh, LegMesh, HardwareMesh, FurniturePieceMesh (+ exploded view)
+    ui/                 ← Toolbar, AddFurniture, PieceList, PieceEditor, RoomSettings,
+                          ProjectActions, ShareDialog, KeyboardShortcuts, RoomMeasure
+    cutlist/CutListView.tsx ← Cut list modal (sheet diagrams, BOM, assembly, PDF export)
   App.tsx               ← Layout: toolbar on top, sidebar on left, viewport fills rest
-  index.css             ← All styles (no CSS framework, just custom properties)
+  index.css             ← All styles (CSS custom properties, no framework)
 ```
 
 ## Key Design Decisions
 
-- **Units**: everything internal is in millimeters. The 3D scene uses a 1:1000 scale (`mmToWorld()` / `worldToMm()` in `RoomBox.tsx`).
-- **Zustand + Immer**: state is deeply nested (project → pieces → components), so Immer's `produce()` is used everywhere for safe mutations. Subscriptions use `subscribeWithSelector` middleware.
-- **Parametric templates generate flat component arrays**: a cabinet template produces ~6-10 Panel objects with pre-computed positions. After creation, every panel is independently editable. Template-based pieces store their `templateType` and `templateParams` so they can be regenerated with new parameters while preserving piece identity.
-- **Parametric constraints**: optional `ParametricConstraint` links between panel properties (width/height) within a piece. When a source component changes, constrained targets auto-update. Constraint propagation runs inside `updateComponent()` in the store.
-- **Snap-to-face**: during drag, each face of the dragged piece's panels is checked against faces of all other pieces' panels and room walls. Rotation-aware AABB half-extents ensure correct face positions for rotated panels. Face snaps take priority over grid snaps.
-- **Exploded view**: purely a rendering effect — component positions in the store are never modified. `useFrame` + refs animate wrapper `<group>` offsets toward/away from the piece center. Labels use drei's `Text` component.
-- **Guillotine bin-packing**: chosen over free-form nesting because real panel saws only make through-cuts. The algorithm is in `cutlist.ts`, ~120 lines, using Best Short Side Fit heuristic.
-- **Room fixtures**: non-furniture items (pillars, radiators, appliances, pipes) are modeled as `FurniturePiece` objects with `isFixture: true`. This reuses 100% of the existing drag/snap/selection/undo infrastructure with zero duplication. Fixtures are excluded from cut lists, BOM, assembly instructions, and PDF export by simple filtering. They participate in snap-to-face so furniture snaps against them. Rendered semi-transparent with orange edges for visual distinction.
-- **No cost tracking**: deliberately excluded from scope. The BOM is quantities + specs only.
-- **No backend**: localStorage auto-save + JSON file export/import. The project file is a direct JSON serialization of the `Project` type.
-- **URL sharing**: projects are shared by compressing the JSON with deflate (via fflate), encoding as base64url, and placing it in the URL hash fragment (`#share=...`). Default materials are stripped before compression and restored on load. The hash is never sent to the server, keeping shared data private. Typical projects (5–20 pieces) produce URLs of 2,000–8,000 chars, well within browser limits.
+- **Units**: millimeters everywhere internally. The 3D scene uses a 1:1000 scale — see `mmToWorld()` / `worldToMm()` in `RoomBox.tsx` (const `S = 0.001`).
+- **Zustand + Immer**: state is deeply nested, so Immer's `produce()` is used for all mutations. `subscribeWithSelector` middleware is enabled.
+- **Parametric templates → flat component arrays**: a template produces ~6–10 `Panel` objects with pre-computed positions. After creation every panel is independently editable. Pieces store `templateType` + `templateParams` so they can be regenerated with new params while preserving piece identity.
+- **Parametric constraints**: optional `ParametricConstraint` links between panel width/height properties inside a piece. `updateComponent()` propagates source changes to constrained targets.
+- **Snap-to-face**: during drag, faces of the dragged piece's panels are checked against faces of all other panels and room walls. Rotation-aware AABB half-extents handle rotated panels. Face snaps take priority over grid snaps.
+- **Exploded view**: rendering-only. `useFrame` + refs animate wrapper `<group>` offsets; component positions in the store are never modified. Labels use drei's `Text`.
+- **Guillotine bin-packing**: chosen over free-form nesting because real panel saws only do through-cuts. ~120 lines in `cutlist.ts`, Best Short Side Fit heuristic.
+- **Room fixtures** (`isFixture: true` on `FurniturePiece`): pillars, radiators, appliances, pipes. Reuse the full drag/snap/selection/undo stack and are filtered out of cut lists, BOM, assembly, and PDF export. Rendered semi-transparent with orange edges. Other furniture snaps against them.
+- **No cost tracking** (deliberate). BOM is quantities + specs only.
+- **URL sharing**: JSON stripped of default materials → deflate → base64url → `#share=...`. Hashes never hit the server. Typical 5–20-piece projects give 2k–8k char URLs.
 
-## State Shape (Zustand)
-
-The store in `useStore.ts` has:
+## Store Shape (Zustand)
 
 ```
 project: Project          ← room, pieces[], materials[]
-selectedPieceId           ← currently selected furniture piece
-selectedComponentId       ← currently selected sub-component (panel, leg, etc.)
+selectedPieceId
+selectedComponentId       ← sub-component (panel, leg, hardware)
 activeTool                ← 'select' | 'move'
-snapEnabled, gridSize     ← grid snapping config
-snapToFaces               ← face-to-face snapping (panel edges, walls)
-snapThreshold             ← mm, proximity threshold for face snapping
-showDimensions, showGrid  ← viewport toggles
-sawKerf                   ← mm, used by cut list generator
-explodedView              ← whether exploded assembly view is active
-explodeFactor             ← 0.5–3.0, how far components spread apart
+snapEnabled, gridSize
+snapToFaces, snapThreshold (mm)
+showDimensions, showGrid
+sawKerf (mm)              ← used by cut list generator
+explodedView, explodeFactor (0.5–3.0)
 activeSnapLines           ← SnapLine[], transient guide lines during drag
-history[], historyIndex   ← undo/redo stack (stores pieces snapshots)
+history[], historyIndex   ← undo/redo (stores pieces snapshots)
 ```
 
-Actions are methods on the same store object. History is pushed after any structural change (add/remove/duplicate/regenerate). Position updates during drag do NOT push history — only `onDragEnd` does.
+History is pushed on any structural change (add/remove/duplicate/regenerate) and on `onDragEnd` — **not** on every position update during drag.
 
 ## Conventions
 
-- **File naming**: PascalCase for React components, camelCase for utils/store
-- **Imports**: use `type` imports for type-only imports (enforced by `verbatimModuleSyntax` in tsconfig)
-- **Component props**: defined as interfaces directly above the component, or inline
-- **3D components**: each mesh type (PanelMesh, LegMesh, HardwareMesh) handles its own click/hover events and calls `setSelection()` on the store
-- **No prop drilling**: all components read from Zustand directly via `useStore(selector)`
-- **CSS**: single `index.css` file using CSS custom properties (--bg-primary, --accent, etc.), no utility classes
+- **Files**: PascalCase for React components, camelCase for utils/store.
+- **Imports**: use `type` imports for type-only imports (`verbatimModuleSyntax` is on).
+- **State access**: components read from Zustand directly via `useStore(selector)`. No prop drilling.
+- **3D events**: each mesh type handles its own click/hover and calls `setSelection()`.
+- **CSS**: single `index.css` with custom properties (`--bg-primary`, `--accent`, …). No utility classes.
 
 ## Common Tasks
 
-### Adding a new furniture template
+### Add a furniture template
+1. Parameter interface in `types/index.ts`.
+2. `create<Name>()` in `utils/templates.ts` (use `createCabinet` as reference).
+3. Option in the `AddFurniture.tsx` template dropdown + conditional param inputs.
+4. In `handleAdd()` set `piece.templateType` + `piece.templateParams`.
+5. Case in `regeneratePiece` switch in `store/useStore.ts`.
+6. Param inputs in `TemplateParams` inside `PieceEditor.tsx`.
 
-1. Define parameter interface in `types/index.ts`
-2. Add generator function in `utils/templates.ts` (see `createCabinet` as reference)
-3. Add option to the template dropdown in `components/ui/AddFurniture.tsx`
-4. Add parameter inputs (conditionally rendered based on template type)
-5. In `handleAdd()`, set `piece.templateType` and `piece.templateParams` so the piece supports re-parameterization
-6. Add the template type to the `regeneratePiece` switch in `store/useStore.ts`
-7. Add template-specific parameter inputs to `TemplateParams` in `PieceEditor.tsx`
+### Add a fixture preset
+Fixtures reuse `FurniturePiece` with `isFixture: true` and always map to `templateType` `'fixture-box'` or `'fixture-cylinder'`. A preset is just defaults:
+1. New option under the "Room Fixtures" optgroup in `AddFurniture.tsx`.
+2. Case in `handleTemplateChange()` with default dimensions + color.
+3. Entry in the `names` map in the fixture branch of `handleAdd()`.
 
-### Adding a new fixture preset
+For a genuinely new fixture shape, follow "Add a component type" and add a new `createFixture<Shape>()` that sets `isFixture` and `fixtureColor`.
 
-Fixtures are non-furniture room objects (pillars, radiators, appliances, etc.) that use the `isFixture` flag on `FurniturePiece`. They reuse all existing piece infrastructure but are excluded from cut lists, BOM, and assembly.
+### Add a component type
+1. Interface in `types/index.ts`; extend the `Component` union.
+2. New mesh component under `components/furniture/`.
+3. Case in `FurniturePieceMesh.tsx` switch.
+4. Add button in `PieceEditor.tsx` + property editor fields in `ComponentEditor`.
+5. Count it in `cutlist.ts` → `generateBOM()`.
+6. Update relevant templates in `templates.ts`.
 
-To add a new preset (e.g., "Window Sill"):
+### Add a material
+Materials are data. Either extend `DEFAULT_MATERIALS` in `store/useStore.ts`, or call the store's `addMaterial()` at runtime (no UI yet).
 
-1. Add a new option to the `<optgroup label="Room Fixtures">` dropdown in `AddFurniture.tsx`
-2. Add a case to `handleTemplateChange()` with default dimensions and color
-3. Add a name entry to the `names` map in the fixture creation block of `handleAdd()`
-4. The preset maps to either `createFixtureBox()` (for box shapes) or `createFixtureCylinder()` (for cylinders) — no new template function needed
+### Add a parametric constraint
+`FurniturePiece.constraints[]` holds `{ sourceComponentId, sourceProperty, targetComponentId, targetProperty, offset }`. `updateComponent()` auto-applies matching constraints. Users manage them in the "🔗 Constraints" section of `PieceEditor`. They're cleaned up when components are removed or a piece is regenerated.
 
-The stored `templateType` is always `'fixture-box'` or `'fixture-cylinder'` regardless of the preset name. The preset just pre-fills defaults.
+### Snap system (`utils/snap.ts`)
+- `getAABBHalfExtents()` — rotation-aware half-extents (XYZ Euler order).
+- `collectSnapTargets()` — room walls + all panel faces, including fixtures.
+- `snapPieceToFaces()` — matches faces of dragged piece against targets; returns adjusted position + guide info.
+- `snapToGrid()` / `snapPositionToGrid()` — fallback for axes not face-snapped.
+- Guides rendered by `SnapGuides` in `Scene.tsx`.
 
-To add a fundamentally new fixture shape (not a box or cylinder):
+### Sharing system (`utils/sharing.ts`)
+- `compressProject()` strips `DEFAULT_MATERIAL_IDS`, JSON-serializes with a `v` version field, deflate-compresses, base64url-encodes.
+- `decompressProject()` reverses and merges defaults back in.
+- `generateShareUrl` / `getShareFromHash` / `clearShareHash` + `estimateShareUrlLength` / `MAX_SAFE_URL_LENGTH`.
+- UI: `ProjectActions.tsx` (share button + clipboard), `ShareDialog.tsx` (import confirmation). Bump `v` when the format changes.
 
-1. Add a new component type (see "Adding a new component type" above)
-2. Add a new `FixtureNewShapeParams` interface in `types/index.ts`
-3. Add `createFixtureNewShape()` in `utils/templates.ts` — must set `isFixture: true` and `fixtureColor`
-4. Add `'fixture-newshape'` to the `templateType` union in `types/index.ts`
-5. Add the case to `regeneratePiece` in `store/useStore.ts`
-6. Pass `isFixture`/`fixtureColor` to the new mesh component from `FurniturePieceMesh.tsx`
+### Cut list (`utils/cutlist.ts`)
+- `guillotinePack()` — core bin-packing.
+- `generateCutList()` — extract panels → group by material → pack.
+- `generateBOM()` — aggregate components by type.
 
-### Adding a new component type
+Both `extractCutPieces()` and `generateBOM()` skip `isFixture` pieces. `CutListView` pre-filters fixtures before calling these and the PDF exporter.
 
-1. Add the type interface in `types/index.ts` and add it to the `Component` union
-2. Create a mesh component in `components/furniture/`
-3. Add the rendering case in `FurniturePieceMesh.tsx`'s switch statement
-4. Add "add" button in `PieceEditor.tsx`
-5. Add property editor fields in the `ComponentEditor` sub-component
-6. Update `cutlist.ts` → `generateBOM()` to count the new type
-7. Update `templates.ts` if any template should include it
+### PDF export (`utils/pdfExport.ts`)
+`exportProjectPDF()` drives `drawTitlePage` → `drawSheetLayout` (one page per sheet) → `drawBOM` → `drawAssembly`. jsPDF v4, A4 portrait, all measurements in mm.
 
-### Adding a new material
-
-Materials are data, not code. Either:
-- Add to `DEFAULT_MATERIALS` array in `store/useStore.ts`
-- Or add at runtime via the store's `addMaterial()` action (no UI for this yet)
-
-### Adding a parametric constraint
-
-Constraints link panel dimensions within a piece. They live on `FurniturePiece.constraints[]`:
-1. Each `ParametricConstraint` has `sourceComponentId`, `sourceProperty` ('width'|'height'), `targetComponentId`, `targetProperty`, and `offset`
-2. When a source component is updated via `updateComponent()`, the store automatically applies all constraints where `sourceComponentId` matches
-3. Users can add/remove constraints via the "🔗 Constraints" section in PieceEditor
-4. Constraints are cleaned up automatically when components are removed or pieces are regenerated
-
-### Modifying the snap system
-
-Snap logic is in `utils/snap.ts`:
-- `getAABBHalfExtents()` — rotation-aware bounding box half-extents (XYZ Euler order)
-- `collectSnapTargets()` — gathers face positions from room walls and all panel faces (rotation-aware)
-- `snapPieceToFaces()` — checks each face of the dragged piece against all targets; returns adjusted position + snap guide info
-- `snapToGrid()` / `snapPositionToGrid()` — grid-based snapping (fallback for axes not face-snapped)
-- Visual snap guides are rendered by the `SnapGuides` component in `Scene.tsx`
-
-Fixtures participate in snap-to-face automatically — `collectSnapTargets()` iterates all pieces including fixtures, so furniture faces snap against fixture faces.
-
-### Modifying the sharing system
-
-Sharing logic is in `utils/sharing.ts`:
-- `compressProject()` — strips default materials, JSON-serializes with version byte, deflate-compresses, encodes as base64url
-- `decompressProject()` — reverses the above, merges default materials back in
-- `generateShareUrl()` / `getShareFromHash()` / `clearShareHash()` — URL helpers
-- `estimateShareUrlLength()` / `MAX_SAFE_URL_LENGTH` — guard against oversized URLs
-
-UI components:
-- `ProjectActions.tsx` — "🔗 Share" button, generates URL, copies to clipboard, shows toast
-- `ShareDialog.tsx` — mounted in App.tsx, checks URL hash on load, shows confirmation dialog before importing a shared project
-
-To change what data is included/excluded in share URLs, edit `compressProject()` and `decompressProject()`. The `DEFAULT_MATERIAL_IDS` set controls which materials are considered built-in and omitted from the URL. Bump the `v` (version) field in the share data if the format changes.
-
-### Modifying the cut list algorithm
-
-All logic is in `utils/cutlist.ts`:
-- `guillotinePack()` — the core bin-packing function
-- `generateCutList()` — orchestrates: extract panels → group by material → pack each group
-- `generateBOM()` — iterates all components, aggregates by type
-
-Both `extractCutPieces()` and `generateBOM()` skip pieces with `isFixture: true`. The `CutListView` component also pre-filters fixtures before passing pieces to these functions and to the PDF exporter.
-
-### Modifying the PDF export
-
-PDF generation is in `utils/pdfExport.ts`:
-- `exportProjectPDF()` — main entry point, orchestrates all pages
-- `drawTitlePage()` — project summary
-- `drawSheetLayout()` — one page per sheet with colored panel diagrams + detail table
-- `drawBOM()` — bill of materials table + sheet requirements
-- `drawAssembly()` — per-piece step-by-step instructions with edge banding notes
-- Uses jsPDF (v4). All measurements in mm on A4 portrait pages.
-
-### Changing the room/panel scale
-
-The scale factor lives in `components/room/RoomBox.tsx`:
-```ts
-const S = 0.001; // mm to Three.js units (meters)
-export const mmToWorld = (mm: number) => mm * S;
-export const worldToMm = (world: number) => world / S;
-```
-
-Every 3D component imports these. Change `S` to change the scale.
+### Change the scene scale
+Edit `const S = 0.001` in `components/room/RoomBox.tsx`. Every 3D component uses `mmToWorld` / `worldToMm` from there.
 
 ## Testing
 
-### Visual Regression Tests (Playwright)
-
-The `playwright/` folder holds the visual regression suite. Each test lives in its own subfolder with a `test.cjs` module and a committed `baseline.png`. The runner spins up a dedicated Vite dev server on port 5179 (avoiding collisions with your `npm run dev` on 5173), drives the app with Playwright + Chromium, screenshots the viewport, and diffs against the baseline using pixelmatch.
+### Visual regression (Playwright)
+`playwright/` holds the committed suite. Each test has its own subfolder with a `test.cjs` and a `baseline.png`. The runner starts a dedicated Vite dev server on port 5179 (so it won't collide with your `npm run dev` on 5173), drives Chromium, screenshots the viewport, and diffs via pixelmatch.
 
 ```bash
-npm run test:visual                      # run all tests
-npm run test:visual -- add-cabinet        # run one test
-npm run test:visual:update                # re-record baselines after intentional UI changes
+npm run test:visual                 # run all
+npm run test:visual -- add-cabinet  # run one
+npm run test:visual:update          # re-record baselines after intentional changes
 ```
 
-See `playwright/README.md` for the full layout, adding new tests, thresholds, and failure artifacts (`actual.png` + `diff.png`).
-
-### Ad-hoc UI Testing
-
-`test-furnier.cjs` (+ `test-furnier-instructions.md`) is a single-file Playwright script for exploratory before/after screenshots against the live GitHub Pages build. Useful for quick one-off verification — the `playwright/` suite is the committed regression net.
-
-### Manual Verification
-
-- `npx tsc --noEmit` — type check
-- `npm run build` — full production build
-- `npm run test:visual` — visual regression suite
-- Manual testing in browser: add each template type, verify 3D rendering, open cut list, check sheet layouts look sane
+See `playwright/README.md` for layout, thresholds, and failure artifacts (`actual.png`, `diff.png`).
 
