@@ -156,6 +156,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 ## Export & Import
 
+- [x] **Screenshot / high-res render** of the current viewport ([docs](docs/screenshot-render.md))
 - [ ] **Export 3D model** — GLTF, OBJ, USDZ for AR preview
 - [ ] **Export to SVG** per panel for CNC / laser cutting
 - [ ] **Import SketchUp / STEP / IFC** as fixtures

@@ -269,6 +269,9 @@ interface AppState {
   explodedView: boolean;
   explodeFactor: number;
 
+  // Viewport capture
+  shouldCaptureViewport: boolean;
+
   // Snap guides
   activeSnapLines: SnapLine[];
 
@@ -325,6 +328,8 @@ interface AppState {
   setSawKerf: (kerf: number) => void;
   setExplodedView: (enabled: boolean) => void;
   setExplodeFactor: (factor: number) => void;
+  setShouldCaptureViewport: (val: boolean) => void;
+  takeScreenshot: () => void;
   setActiveSnapLines: (lines: SnapLine[]) => void;
 
   // History
@@ -363,6 +368,7 @@ export const useStore = create<AppState>()(
 
     explodedView: false,
     explodeFactor: 1.5,
+    shouldCaptureViewport: false,
     activeSnapLines: [],
 
     history: [],
@@ -697,6 +703,8 @@ export const useStore = create<AppState>()(
     setSawKerf: (kerf) => set({ sawKerf: kerf }),
     setExplodedView: (enabled) => set({ explodedView: enabled }),
     setExplodeFactor: (factor) => set({ explodeFactor: factor }),
+    setShouldCaptureViewport: (val) => set({ shouldCaptureViewport: val }),
+    takeScreenshot: () => set({ shouldCaptureViewport: true }),
     setActiveSnapLines: (lines) => set({ activeSnapLines: lines }),
 
     pushHistory: () =>

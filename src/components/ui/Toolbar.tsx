@@ -1,6 +1,7 @@
 import { useStore } from '../../store/useStore';
 import type { Tool } from '../../types';
 import { CameraPresets } from './CameraPresets';
+import { ScreenshotButton } from './ScreenshotButton';
 
 const tools: { id: Tool; label: string; icon: string }[] = [
   { id: 'select', label: 'Select', icon: '⇱' },
@@ -118,6 +119,10 @@ export function Toolbar() {
       <div className="tool-separator" />
 
       <CameraPresets />
+
+      <div className="tool-separator" />
+
+      <ScreenshotButton />
     </div>
   );
 }
