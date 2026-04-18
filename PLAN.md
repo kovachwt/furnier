@@ -9,7 +9,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 - [ ] **Instanced rendering** for repeated hardware (shelf pins × 40)
 - [ ] **Occlusion culling** for large scenes
 - [ ] **Lazy-loaded PDF export code** to keep the main bundle lean
-- [x] **Automated visual regression tests** using the existing Playwright setup
+- [x] **Automated visual regression tests** using the existing Playwright setup (docs/automated-playwright-tests.md)
 - [ ] **Unit tests** for `cutlist.ts`, `snap.ts`, `templates.ts`, `sharing.ts`
 
 ## Accessibility
@@ -86,7 +86,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 - [ ] **Numerical input for position/rotation** via a floating input near the gizmo
 - [ ] **Constrain-to-axis** during drag by holding Shift (partially present? verify)
-- [ ] **Rotate-by-90° hotkey** for the selected piece
+- [x] **Rotate-by-90° hotkey** for the selected piece ([docs](docs/rotate-by-90-hotkey.md))
 - [ ] **Stack-drop** — drop a piece on top of another, auto-align Y to sit on it
 - [ ] **Snap-to-center / snap-to-edge** modifiers
 - [ ] **Duplicate-with-offset** (Ctrl+D + drag) like in CAD tools

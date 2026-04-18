@@ -97,6 +97,13 @@ export default function App() {
       if (e.key === 'PageUp')     { e.preventDefault(); state.nudgeSelectedPiece(0, nudgeAmount, 0); return; }
       if (e.key === 'PageDown')   { e.preventDefault(); state.nudgeSelectedPiece(0, -nudgeAmount, 0); return; }
 
+      // --- R: rotate selected piece 90° around Y axis ---
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        state.rotateSelectedPiece(90);
+        return;
+      }
+
       // Camera keys (WASD, QE, RF) are handled by KeyboardCameraControls inside the Canvas
     };
     window.addEventListener('keydown', handler);

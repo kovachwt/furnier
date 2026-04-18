@@ -307,6 +307,7 @@ interface AppState {
 
   // Movement
   nudgeSelectedPiece: (dx: number, dy: number, dz: number) => void;
+  rotateSelectedPiece: (angleDeg: number) => void;
 
   // Tools & toggles
   setActiveTool: (tool: Tool) => void;
@@ -630,6 +631,31 @@ export const useStore = create<AppState>()(
       const idx = piece.components.findIndex((c) => c.id === selectedComponentId);
       const prev = (idx - 1 + piece.components.length) % piece.components.length;
       set({ selectedComponentId: piece.components[prev].id });
+    },
+
+    rotateSelectedPiece: (angleDeg) => {
+      const { selectedPieceId, project } = get();
+      if (!selectedPieceId) return;
+      const piece = project.pieces.find((p) => p.id === selectedPieceId);
+      if (!piece || piece.locked) return;
+      const angleRad = (angleDeg * Math.PI) / 180;
+      set(produce((s: AppState) => {
+        const p = s.project.pieces.find((p) => p.id === selectedPieceId);
+        if (p) {
+          // Rotate around Y axis (vertical)
+          p.rotation[1] += angleRad;
+          // Normalize to [0, 2π)
+          p.rotation[1] = p.rotation[1] % (2 * Math.PI);
+          if (p.rotation[1] < 0) p.rotation[1] += 2 * Math.PI;
+          // Also rotate all child components around Y
+          for (const c of p.components) {
+            c.rotation[1] += angleRad;
+            c.rotation[1] = c.rotation[1] % (2 * Math.PI);
+            if (c.rotation[1] < 0) c.rotation[1] += 2 * Math.PI;
+          }
+        }
+      }));
+      get().pushHistory();
     },
 
     nudgeSelectedPiece: (dx, dy, dz) => {

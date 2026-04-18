@@ -21,6 +21,7 @@ const groups: ShortcutGroup[] = [
       { keys: '↑ ↓', desc: 'Nudge Z by grid size' },
       { keys: 'Page Up / Down', desc: 'Nudge Y by grid size' },
       { keys: 'Shift + arrows', desc: 'Fine nudge (1 mm)' },
+      { keys: 'R', desc: 'Rotate selected piece 90°' },
     ],
   },
   {
