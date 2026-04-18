@@ -19,9 +19,37 @@ async function openApp(page, url) {
   await page.waitForTimeout(SCENE_SETTLE_MS);
 }
 
+async function switchToAddTab(page) {
+  // After adding/selecting a piece, the sidebar auto-switches to the Edit tab.
+  // Click the Add tab to get back to the AddFurniture panel.
+  const clicked = await page.evaluate(() => {
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const addTab = tabs.find((t) => t.textContent && t.textContent.includes('Add'));
+    if (!addTab) return false;
+    addTab.click();
+    return true;
+  });
+  if (!clicked) throw new Error('Could not find Add tab button');
+  await page.waitForTimeout(150);
+}
+
+async function switchToEditTab(page) {
+  const clicked = await page.evaluate(() => {
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const editTab = tabs.find((t) => t.textContent && t.textContent.includes('Edit'));
+    if (!editTab) return false;
+    editTab.click();
+    return true;
+  });
+  if (!clicked) throw new Error('Could not find Edit tab button');
+  await page.waitForTimeout(150);
+}
+
 async function selectTemplate(page, value) {
-  // The template <select> is the first select on the Add panel.
+  // The template <select> is in the Add panel.
   // We locate by its <option> value for robustness.
+  // Make sure we're on the Add tab first.
+  await switchToAddTab(page);
   await page.evaluate((v) => {
     const selects = Array.from(document.querySelectorAll('select'));
     const target = selects.find((s) => Array.from(s.options).some((o) => o.value === v));
@@ -120,6 +148,8 @@ async function addPiece(page, { template, width, height, depth, shelves, doors, 
 module.exports = {
   openApp,
   selectTemplate,
+  switchToAddTab,
+  switchToEditTab,
   clickAdd,
   clickToolbarButton,
   toggleTheme,
