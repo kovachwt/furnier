@@ -67,7 +67,6 @@ src/
 project: Project          ← room, pieces[], materials[]
 selectedPieceId
 selectedComponentId       ← sub-component (panel, leg, hardware)
-activeTool                ← 'select' | 'move'
 snapEnabled, gridSize
 snapToFaces, snapThreshold (mm)
 showDimensions, showGrid
@@ -78,6 +77,8 @@ history[], historyIndex   ← undo/redo (stores pieces snapshots)
 ```
 
 History is pushed on any structural change (add/remove/duplicate/regenerate) and on `onDragEnd` — **not** on every position update during drag.
+
+**⚠ Always run visual tests (`npm run test:visual`) before committing UI changes.** If baselines need updating due to intentional changes, run `npm run test:visual:update`, commit the updated baselines in the same commit, and verify all tests pass.
 
 ## Conventions
 
