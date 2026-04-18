@@ -382,8 +382,8 @@ export const useStore = create<AppState>()(
     darkTheme: true,
     activeSnapLines: [],
 
-    history: [],
-    historyIndex: -1,
+    history: [{ pieces: [] } as HistoryEntry],
+    historyIndex: 0,
 
     setRoom: (room) =>
       set(produce((s: AppState) => {
@@ -769,15 +769,16 @@ export const useStore = create<AppState>()(
           project,
           selectedPieceId: null,
           selectedComponentId: null,
-          history: [],
-          historyIndex: -1,
+          history: [{ pieces: JSON.parse(JSON.stringify(project.pieces)) }],
+          historyIndex: 0,
         });
       } catch (e) {
         console.error('Failed to load project:', e);
       }
     },
 
-    resetProject: () =>
+    resetProject: () => {
+      const initialPieces: FurniturePiece[] = [];
       set({
         project: {
           name: 'Untitled Project',
@@ -787,9 +788,10 @@ export const useStore = create<AppState>()(
         },
         selectedPieceId: null,
         selectedComponentId: null,
-        history: [],
-        historyIndex: -1,
-      }),
+        history: [{ pieces: initialPieces }],
+        historyIndex: 0,
+      });
+    },
   }))
 );
 
@@ -810,7 +812,11 @@ try {
   if (saved) {
     const project = JSON.parse(saved) as Project;
     if (project.room && project.pieces && project.materials) {
-      useStore.setState({ project });
+      useStore.setState({
+        project,
+        history: [{ pieces: JSON.parse(JSON.stringify(project.pieces)) } as HistoryEntry],
+        historyIndex: 0,
+      });
     }
   }
 } catch { /* ignore */ }
