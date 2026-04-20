@@ -50,9 +50,9 @@ function ClashBox({ aabb }: ClashBoxProps) {
   const cz = mmToWorld(aabb.minZ + (aabb.maxZ - aabb.minZ) / 2);
 
   return (
-    <group>
+    <group position={[cx, cy, cz]}>
       {/* Translucent face overlay */}
-      <mesh position={[cx, cy, cz]}>
+      <mesh>
         <boxGeometry args={[w, h, d]} />
         <meshBasicMaterial
           color="#ff3344"
