@@ -24,6 +24,12 @@ export function CameraAnimator() {
   const lastCameraTarget = useRef<string | null>(null);
 
   useEffect(() => {
+    // Reset tracking refs when camera/controls change (e.g. after window resize).
+    // Without this, clicking the same preset button again won't trigger an animation
+    // because the store values haven't changed and the refs still match them.
+    lastPreset.current = '';
+    lastCameraTarget.current = null;
+
     const unsub = useStore.subscribe((s) => {
       const targetKey = s.cameraTarget
         ? `${s.cameraTarget.position.join(',')}-${s.cameraTarget.target.join(',')}`
