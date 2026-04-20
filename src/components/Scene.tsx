@@ -11,8 +11,8 @@ import { ViewportCapture } from './ViewportCapture';
 import { ClashVisualization } from './ClashVisualization';
 import type { Vec3 } from '../types';
 
-/** Compute the center X/Z of a piece's AABB in mm. */
-function getPieceCenter(piece: { components: Array<{ position: Vec3; type: string; width?: number; height?: number; depth?: number; diameter?: number }> }): { cx: number; cz: number } {
+/** Compute the center X/Z of a piece's components in mm (local to piece origin). */
+function getPieceLocalCenter(piece: { components: Array<{ position: Vec3; type: string }> }): { cx: number; cz: number } {
   let cx = 0, cz = 0, n = 0;
   for (const comp of piece.components) {
     cx += comp.position[0];
@@ -37,9 +37,9 @@ function SmartGuides() {
   const selectedPiece = pieces.find(p => p.id === selectedPieceId);
   if (!selectedPiece) return null;
 
-  const { cx, cz } = getPieceCenter(selectedPiece);
-  const worldCx = mmToWorld(cx);
-  const worldCz = mmToWorld(cz);
+  const { cx, cz } = getPieceLocalCenter(selectedPiece);
+  const worldCx = mmToWorld(cx + selectedPiece.position[0]);
+  const worldCz = mmToWorld(cz + selectedPiece.position[2]);
 
   // Find neighbors whose center aligns with selected piece's center (within 10mm)
   const alignThreshold = 10;
@@ -47,9 +47,11 @@ function SmartGuides() {
 
   for (const other of pieces) {
     if (other.id === selectedPieceId || other.isFixture) continue;
-    const { cx: ocx, cz: ocz } = getPieceCenter(other);
-    const dx = Math.abs(ocx - cx);
-    const dz = Math.abs(ocz - cz);
+    const { cx: ocx, cz: ocz } = getPieceLocalCenter(other);
+    const nwx = ocx + other.position[0];
+    const nwz = ocz + other.position[2];
+    const dx = Math.abs(nwx - (cx + selectedPiece.position[0]));
+    const dz = Math.abs(nwz - (cz + selectedPiece.position[2]));
     if (dx < alignThreshold || dz < alignThreshold) {
       alignedNeighbors.push(other.id);
     }
@@ -98,7 +100,7 @@ function SmartGuides() {
           <group key={neighborId}>
             {/* Vertical line through neighbor center */}
             <Line
-              points={[[mmToWorld(ncx), 0, -hd], [mmToWorld(ncx), h, -hd]]}
+              points={[[mmToWorld(nwx), 0, -hd], [mmToWorld(nwx), h, -hd]]}
               color="#ff00ff"
               lineWidth={1}
               transparent
@@ -106,7 +108,7 @@ function SmartGuides() {
             />
             {/* Horizontal line through neighbor center */}
             <Line
-              points={[[hw, 0, mmToWorld(ncz)], [-hw, 0, mmToWorld(ncz)]]}
+              points={[[hw, 0, mmToWorld(nwz)], [-hw, 0, mmToWorld(nwz)]]}
               color="#ff00ff"
               lineWidth={1}
               transparent
