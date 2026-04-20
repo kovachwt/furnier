@@ -164,3 +164,16 @@ npm run test:visual:update          # re-record baselines after intentional chan
 
 See `playwright/README.md` for layout, thresholds, and failure artifacts (`actual.png`, `diff.png`).
 
+### Golden rules for visual tests
+
+1. **Never commit a baseline without inspecting it.** When a test first runs it writes `baseline.png` automatically — this is a *write-first* step, not a verified step. If your code has a bug, the baseline captures the bug and the test will pass forever. Always open the new baseline and confirm it looks correct before committing.
+
+2. **Prefer programmatic assertions *before* the screenshot.** Visual diffs catch *regressions* but can't tell you "is this right?". Use `page.evaluate()` to verify store state, DOM text, or computed values *inside the test's `action`*, and `throw` if the expected condition isn't met. Examples:
+   - Verify a toolbar button shows a count: `if (!text.match(/Clash \(\d+\)/)) throw …`
+   - Verify `project.pieces.length === 2`
+   - Verify `clashPairs.length > 0` via `useStore.getState()`
+
+3. **Write a "should not exist" test when appropriate.** If a feature introduces overlays that could appear at the wrong place (e.g. a phantom box at `[0,0,0]`), add a test that sets up a *non-clashing* scene and asserts no overlays appear. The empty baseline should have no red boxes — any red in a subsequent run will fail the diff.
+
+4. **Review baselines in PRs like code.** A changed `baseline.png` is a first-class artifact. If a PR changes behavior, the baseline diff should show the expected change and nothing else.
+

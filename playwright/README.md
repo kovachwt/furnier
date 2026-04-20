@@ -83,6 +83,15 @@ The runner handles everything around `action`:
 
 Baselines are committed to git. Review them in PRs like any other screenshot.
 
+> ⚠ **Critical: the first-run baseline is unverified.** If your code has a bug when the test first runs, the baseline captures the bug and the test passes forever. Always:
+> 1. Run the test to create the baseline.
+> 2. Open `baseline.png` and confirm it shows exactly what you expect.
+> 3. Only then commit it.
+
+### Adding negative tests
+
+When adding a feature that produces visual overlays (clash boxes, guides, labels), also write a test for the **absence** case. For example, after writing `clash-detection/test.cjs` (two overlapping cabinets), add a `no-clash` test with two separated cabinets that asserts no red boxes appear. A phantom overlay at `[0,0,0]` will show up immediately as a diff against the clean baseline.
+
 ## Failure artifacts
 
 When a test fails the runner writes two files into the test folder:
@@ -106,7 +115,21 @@ WebGL output on headless Chromium is not bit-exact across machines/GPU drivers. 
 1. `mkdir playwright/my-new-test`
 2. Create `playwright/my-new-test/test.cjs` following the template above.
 3. `node playwright/run.cjs my-new-test` — first run writes the baseline.
-4. Inspect `playwright/my-new-test/baseline.png` to confirm it looks right.
+4. **Open and inspect `baseline.png`** — confirm it shows exactly what you expect. If it looks wrong, fix your code *before* committing the baseline.
 5. Commit the folder, `baseline.png` included.
+
+### Adding programmatic assertions
+
+The `action` runs inside the Playwright page context. Use `page.evaluate()` to verify store state or DOM content *before* the screenshot is taken. A `throw` in the action fails the test immediately, which is faster and more informative than a visual diff:
+
+```js
+action: async (page, app) => {
+  await app.addPiece(page, { template: 'cabinet' });
+  // Verify the piece was actually added
+  const count = await page.evaluate(() => useStore.getState().project.pieces.length);
+  if (count !== 1) throw new Error(`Expected 1 piece, got ${count}`);
+  // Now take the screenshot (done automatically by the runner)
+},
+```
 
 If your test needs a UI interaction that isn't already in `lib/app.cjs`, add a helper there first.
