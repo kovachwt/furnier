@@ -24,11 +24,17 @@ export function CameraAnimator() {
   const lastCameraTarget = useRef<string | null>(null);
 
   useEffect(() => {
-    // Reset tracking refs when camera/controls change (e.g. after window resize).
+    // Reset tracking refs when camera/controls change (e.g. after canvas remount)
+    // or when the window resizes (orientation change, split-screen, etc).
     // Without this, clicking the same preset button again won't trigger an animation
     // because the store values haven't changed and the refs still match them.
     lastPreset.current = '';
     lastCameraTarget.current = null;
+
+    const resetTracking = () => {
+      lastPreset.current = '';
+      lastCameraTarget.current = null;
+    };
 
     const unsub = useStore.subscribe((s) => {
       const targetKey = s.cameraTarget
@@ -47,7 +53,12 @@ export function CameraAnimator() {
         }
       }
     });
-    return unsub;
+
+    window.addEventListener('resize', resetTracking);
+    return () => {
+      unsub();
+      window.removeEventListener('resize', resetTracking);
+    };
   }, [camera, controls]);
 
   useFrame((_, delta) => {
