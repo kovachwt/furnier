@@ -95,7 +95,9 @@ function SmartGuides() {
       {alignedNeighbors.map((neighborId) => {
         const neighbor = pieces.find(p => p.id === neighborId);
         if (!neighbor) return null;
-        const { cx: ncx, cz: ncz } = getPieceCenter(neighbor);
+        const { cx: ncx, cz: ncz } = getPieceLocalCenter(neighbor);
+        const nwx = ncx + neighbor.position[0];
+        const nwz = ncz + neighbor.position[2];
         return (
           <group key={neighborId}>
             {/* Vertical line through neighbor center */}
