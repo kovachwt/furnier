@@ -127,12 +127,24 @@ export default function App() {
 
   const isNarrow = useIsNarrow();
 
+  // Detect landscape on narrow screens — used to further compact the
+  // bottom sheet when vertical space is at a premium.
+  const [isLandscape, setIsLandscape] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(orientation: landscape)').matches : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: landscape)');
+    const handler = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   // On narrow screens the sidebar becomes a bottom sheet; it starts
   // collapsed so the viewport is maximised.
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className={`app ${isNarrow ? 'app--narrow' : 'app--wide'}`}>
+    <div className={`app ${isNarrow ? 'app--narrow' : 'app--wide'}${isNarrow && isLandscape ? ' app--landscape' : ''}`}>
       <Toolbar />
 
       <div className="main-area">
@@ -179,14 +191,31 @@ export default function App() {
         ) : (
           /* ── Mobile: bottom sheet ── */
           <div className={`bottom-sheet ${sidebarOpen ? 'bottom-sheet--open' : 'bottom-sheet--collapsed'}`}>
-            {/* Drag handle */}
-            <button
-              className="bottom-sheet-handle"
-              onClick={() => setSidebarOpen((v) => !v)}
-              aria-label={sidebarOpen ? 'Collapse panel' : 'Expand panel'}
-            >
-              <span className="bottom-sheet-handle-bar" />
-            </button>
+            {/* Handle bar — tap to toggle */}
+            <div className="bottom-sheet-handle">
+              {!sidebarOpen && (
+                <button
+                  className="bottom-sheet-handle-btn"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Expand panel"
+                >
+                  <span className="bottom-sheet-handle-bar" />
+                </button>
+              )}
+              {sidebarOpen && (
+                <>
+                  <span className="bottom-sheet-handle-bar" />
+                  <button
+                    className="bottom-sheet-minimize-btn"
+                    onClick={() => setSidebarOpen(false)}
+                    aria-label="Minimize panel"
+                    title="Minimize (tap bar to reopen)"
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
+            </div>
 
             <div className="bottom-sheet-content">
               <div className="tab-bar">

@@ -1404,7 +1404,8 @@ html, body, #root {
   border-top: 1px solid var(--border);
   border-radius: 16px 16px 0 0;
   box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   max-height: 56px;          /* collapsed: handle bar only */
   overflow: hidden;
 }
@@ -1425,6 +1426,19 @@ html, body, #root {
   border: none;
   cursor: pointer;
   padding: 0;
+  gap: 8px;
+}
+
+.bottom-sheet-handle-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .bottom-sheet-handle-bar {
@@ -1433,6 +1447,34 @@ html, body, #root {
   height: 4px;
   border-radius: 2px;
   background: var(--border);
+  transition: all 0.2s;
+}
+
+.bottom-sheet-minimize-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.bottom-sheet-minimize-btn:hover,
+.bottom-sheet-minimize-btn:active {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
 }
 
 .bottom-sheet-content {
@@ -1563,6 +1605,65 @@ html, body, #root {
   /* ── Room settings: full-width ── */
   .room-settings-dialog {
     max-width: 100%;
+  }
+}
+
+/* ════════════════════════════════════════
+   Landscape on narrow screens (phone rotated)
+   Vertical space is extremely limited — compact the bottom sheet
+   ════════════════════════════════════════ */
+
+@media (max-width: 767px) and (orientation: landscape) {
+  /* Shrink toolbar even more */
+  .toolbar {
+    padding: 2px 6px;
+    min-height: 32px;
+  }
+
+  .tool-btn {
+    padding: 2px 6px;
+    font-size: 10px;
+    min-height: 28px;
+  }
+
+  .tool-separator {
+    height: 14px;
+  }
+
+  /* Bottom sheet: thin floating pill when collapsed */
+  .bottom-sheet {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .bottom-sheet--collapsed .bottom-sheet-handle {
+    height: 28px;
+    min-height: 28px;
+  }
+
+  .bottom-sheet--collapsed .bottom-sheet-handle-bar {
+    width: 48px;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0.7;
+  }
+
+  .bottom-sheet--collapsed {
+    max-height: 28px;
+  }
+
+  /* When expanded in landscape, cap at 50vh (more scene space) */
+  .bottom-sheet--open {
+    max-height: 50vh;
+  }
+
+  /* Shortcuts hint: position above the slim collapsed bar */
+  .shortcuts-hint-btn {
+    bottom: 36px !important;
+  }
+
+  /* Keep mobile controls visible but don't let them overlap the sheet */
+  .mobile-controls {
+    bottom: 40px;
   }
 }
 
