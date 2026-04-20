@@ -1,4 +1,5 @@
-import type { FurniturePiece, Vec3 } from '../types';
+import * as THREE from 'three';
+import type { FurniturePiece } from '../types';
 
 /** Axis-aligned bounding box in mm (world space). */
 export interface AABB {
@@ -16,101 +17,100 @@ export interface ClashPair {
   pieceB: string;
 }
 
-/**
- * Compute the AABB of a single component in the piece's local (unrotated) space.
- * Returns [minX, maxX, minY, maxY, minZ, maxZ].
- */
-function componentAABBLocal(comp: {
-  type: string;
-  position: Vec3;
-  width?: number;
-  height?: number;
-  depth?: number;
-  diameter?: number;
-}): [number, number, number, number, number, number] {
-  const [px, py, pz] = comp.position;
-
+/** Half-extents of a component in its own local (unrotated) space. */
+function componentHalfExtents(comp: FurniturePiece['components'][number]): [number, number, number] {
   switch (comp.type) {
-    case 'panel': {
-      const w = comp.width!;
-      const h = comp.height!;
-      const d = comp.depth!;
-      return [px - w / 2, px + w / 2, py - h / 2, py + h / 2, pz - d / 2, pz + d / 2];
-    }
+    case 'panel':
+      return [comp.width! / 2, comp.height! / 2, comp.depth! / 2];
     case 'leg': {
       const r = (comp.diameter ?? 40) / 2;
-      const h = comp.height ?? 0;
-      return [px - r, px + r, py - h / 2, py + h / 2, pz - r, pz + r];
+      return [r, (comp.height ?? 0) / 2, r];
     }
     case 'handle': {
       const r = (comp.diameter ?? 25) / 2;
-      return [px - r, px + r, py - r, py + r, pz - r, pz + r];
+      return [r, r, r];
     }
     case 'hinge':
     case 'shelf-pin':
-    case 'drawer-slide': {
-      // Treat as small box
-      return [px - 5, px + 5, py - 5, py + 5, pz - 5, pz + 5];
-    }
+    case 'drawer-slide':
+      return [5, 5, 5];
     default:
-      return [px, px, py, py, pz, pz];
+      return [0, 0, 0];
   }
 }
 
 /**
- * Compute the world-space AABB of a piece, accounting for its position
- * and Y-axis rotation. Components are merged into one bounding box.
+ * Compute the world-space AABB of a piece, accounting for:
+ * - Each component's own rotation (Euler angles in the piece's local frame)
+ * - The piece's rotation (applied around the piece origin)
+ * - The piece's position (world-space offset)
+ *
+ * Transforms all 8 corners of each component's bounding box through the
+ * full hierarchy: component-local → piece-local → world.
  */
 export function computePieceAABB(piece: FurniturePiece): AABB {
-  const [, ry] = piece.rotation;
-  const cosA = Math.cos(ry);
-  const sinA = Math.sin(ry);
-
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
-  for (const comp of piece.components) {
-    const [lminX, lmaxX, lminY, lmaxY, lminZ, lmaxZ] = componentAABBLocal(comp);
+  // Pre-build piece rotation (applied after component transforms)
+  const pieceRot = new THREE.Euler(piece.rotation[0], piece.rotation[1], piece.rotation[2]);
+  const piecePos = piece.position;
 
-    // Four corners in the XZ plane (top and bottom share same XZ bounds)
-    const corners: [number, number][] = [
-      [lminX, lminZ],
-      [lmaxX, lminZ],
-      [lminX, lmaxZ],
-      [lmaxX, lmaxZ],
+  for (const comp of piece.components) {
+    const [hx, hy, hz] = componentHalfExtents(comp);
+
+    // Component rotation (Euler, default XYZ order — matches THREE.Object3D)
+    const compRot = new THREE.Euler(comp.rotation[0], comp.rotation[1], comp.rotation[2]);
+    const compPos = comp.position;
+
+    // Transform all 8 corners through: local → comp-rotate → comp-translate → piece-rotate → piece-translate
+    const corners: [number, number, number][] = [
+      [-hx, -hy, -hz], [ hx, -hy, -hz],
+      [-hx,  hy, -hz], [ hx,  hy, -hz],
+      [-hx, -hy,  hz], [ hx, -hy,  hz],
+      [-hx,  hy,  hz], [ hx,  hy,  hz],
     ];
 
-    for (const [lx, lz] of corners) {
-      // Apply Y-rotation around the piece's origin, then translate
-      const wx = piece.position[0] + lx * cosA - lz * sinA;
-      const wz = piece.position[2] + lx * sinA + lz * cosA;
+    for (const [lx, ly, lz] of corners) {
+      // Apply component rotation
+      const corner = new THREE.Vector3(lx, ly, lz).applyEuler(compRot);
+      // Translate to component position (in piece's local space)
+      corner.x += compPos[0];
+      corner.y += compPos[1];
+      corner.z += compPos[2];
+      // Apply piece rotation
+      corner.applyEuler(pieceRot);
+      // Translate to piece position (world space)
+      corner.x += piecePos[0];
+      corner.y += piecePos[1];
+      corner.z += piecePos[2];
 
-      if (wx < minX) minX = wx;
-      if (wx > maxX) maxX = wx;
-      if (wz < minZ) minZ = wz;
-      if (wz > maxZ) maxZ = wz;
+      if (corner.x < minX) minX = corner.x;
+      if (corner.x > maxX) maxX = corner.x;
+      if (corner.y < minY) minY = corner.y;
+      if (corner.y > maxY) maxY = corner.y;
+      if (corner.z < minZ) minZ = corner.z;
+      if (corner.z > maxZ) maxZ = corner.z;
     }
-
-    // Y bounds are unaffected by Y-rotation
-    if (lminY < minY) minY = lminY;
-    if (lmaxY > maxY) maxY = lmaxY;
   }
 
   return { minX, minY, minZ, maxX, maxY, maxZ };
 }
 
 /**
- * Check whether two AABBs overlap (including touching = overlap).
+ * Check whether two AABBs actually interpenetrate.
+ * Touching surfaces (exact boundary contact) are NOT considered clashes —
+ * furniture placed flush against each other is expected and valid.
  */
 export function aabbOverlap(a: AABB, b: AABB): boolean {
   return (
-    a.minX <= b.maxX &&
-    a.maxX >= b.minX &&
-    a.minY <= b.maxY &&
-    a.maxY >= b.minY &&
-    a.minZ <= b.maxZ &&
-    a.maxZ >= b.minZ
+    a.minX < b.maxX &&
+    a.maxX > b.minX &&
+    a.minY < b.maxY &&
+    a.maxY > b.minY &&
+    a.minZ < b.maxZ &&
+    a.maxZ > b.minZ
   );
 }
 
@@ -119,7 +119,10 @@ export function aabbOverlap(a: AABB, b: AABB): boolean {
  * Returns an array of ClashPair objects.
  */
 export function findClashes(pieces: FurniturePiece[]): ClashPair[] {
-  const aabbs = pieces.map(p => ({ piece: p, aabb: computePieceAABB(p) }));
+  // Only check furniture-vs-furniture; fixtures are excluded from this pass
+  // (fixture proximity is a separate concern — see PLAN.md).
+  const furniture = pieces.filter(p => !p.isFixture);
+  const aabbs = furniture.map(p => ({ piece: p, aabb: computePieceAABB(p) }));
   const clashes: ClashPair[] = [];
 
   for (let i = 0; i < aabbs.length; i++) {

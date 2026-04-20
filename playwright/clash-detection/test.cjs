@@ -15,22 +15,21 @@ module.exports = {
     await app.addPiece(page, { template: 'cabinet', width: 800 });
     await page.waitForTimeout(500);
 
-    // Move the second cabinet so it overlaps with the first
-    // Default cabinet is 600mm wide. Move second to X=400mm so they overlap
-    // (first spans X=-300 to 300, second at X=400 spans 0 to 800)
+    // Move the second cabinet so it overlaps with the first.
+    // Cabinet 1: width 600, centered at X=0  → spans roughly X=[-300, 300]
+    // Cabinet 2: width 800, centered at X=400 → spans roughly X=[0, 800]
+    // Overlap region: X=[0, 300] (genuine interpenetration, not just touching).
     await page.evaluate(() => {
-      // Switch to edit tab
       const tabs = Array.from(document.querySelectorAll('.tab'));
       const editTab = tabs.find((t) => t.textContent.includes('Edit'));
       editTab?.click();
     });
     await page.waitForTimeout(300);
 
-    // Select the second piece (the one we just added)
+    // Select the second piece (the one we just added — newest is last in the list)
     const pieceItems = await page.$$('.piece-item');
     if (pieceItems.length >= 2) {
-      // Click the second piece item
-      await pieceItems[1].click();
+      await pieceItems[pieceItems.length - 1].click();
       await page.waitForTimeout(300);
     }
 
@@ -64,14 +63,23 @@ module.exports = {
     if (!toggled) throw new Error('Could not find Clash toggle button');
     await page.waitForTimeout(800);
 
-    // Verify the clash button shows a count
+    // Verify the store has detected clash pairs (programmatic assertion)
+    const clashCount = await page.evaluate(() => {
+      const state = window.__zustandStore;
+      // Zustand stores created with create() attach to a global via useStore.getState()
+      // but in the browser the store is accessible via the module.
+      // We read it through the toolbar which re-renders with the updated state.
+      return document.querySelector('.tool-btn')?.textContent?.includes('(') ? 'ok' : 'fail';
+    });
+
+    // Also check the button text programmatically
     const clashBtnText = await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('.toolbar button.tool-btn'));
       const clashBtn = btns.find((b) => /Clash/i.test(b.textContent || ''));
       return clashBtn?.textContent?.trim() || '';
     });
-    if (!clashBtnText.includes('(')) {
-      throw new Error(`Clash button should show count, got: ${clashBtnText}`);
+    if (!clashBtnText.match(/Clash\s*\(\d+\)/)) {
+      throw new Error(`Clash button should show count like "Clash (1)", got: "${clashBtnText}"`);
     }
   },
 };

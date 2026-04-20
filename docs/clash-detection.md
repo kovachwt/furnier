@@ -2,7 +2,7 @@
 
 ## Overview
 
-When enabled, clash detection highlights furniture pieces that overlap with each other using **red translucent bounding boxes**. The toolbar button shows the number of detected clash pairs in parentheses.
+When enabled, clash detection highlights **furniture pieces** that interpenetrate each other using red translucent bounding boxes. The toolbar button shows the number of detected clash pairs in parentheses.
 
 ## Where it lives
 
@@ -25,15 +25,15 @@ When enabled, clash detection highlights furniture pieces that overlap with each
 
 ## How it works
 
-- **AABB computation**: For each piece, the bounding box is computed by iterating all components (panels, legs, handles, etc.), extracting their local extents, and transforming corners by the piece's Y-axis rotation.
-- **Overlap check**: Every pair of AABBs is tested for intersection (including touching surfaces). The check is O(n²) across all pieces.
-- **Reactive updates**: A `useEffect` hook in the visualization component recomputes clashes whenever `project.pieces` or `showClashDetection` changes. This avoids Immer Proxy issues that would occur in a Zustand subscription.
-- **Merged AABB**: If a piece clashes with multiple others, all overlapping AABBs are merged into one bounding box for a clean outline.
+- **AABB computation**: For each piece, the bounding box is computed by iterating all components (panels, legs, handles, hinges, etc.), extracting their local half-extents, transforming all 8 corners through the full transform hierarchy (component rotation → component translation → piece rotation → piece translation), and finding the min/max extents. This correctly handles rotated panels (e.g. cabinet side panels rotated 90° around Y).
+- **Overlap check**: Every pair of furniture AABBs is tested for interpenetration using strict inequalities — touching surfaces are **not** counted as clashes (furniture placed flush against each other is valid).
+- **Fixtures excluded**: Room fixtures (pillars, radiators, etc.) are filtered out of the furniture-vs-furniture pass. Fixture proximity is a separate concern tracked in PLAN.md.
+- **Reactive updates**: A `useEffect` hook in the visualization component recomputes clashes whenever `project.pieces` or `showClashDetection` changes.
+- **Per-piece rendering**: Each clashing piece gets its own red bounding box overlay. If a piece clashes with multiple others, it's still rendered once.
 
 ## Performance
 
 - For typical projects (< 50 pieces), the O(n²) check runs in a few milliseconds.
-- The AABB computation is cached per render cycle — no redundant work when the same piece is checked against multiple neighbors.
 - Disabled by default (off) so there's zero overhead when not in use.
 
 ## Testing
