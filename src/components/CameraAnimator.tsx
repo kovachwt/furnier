@@ -10,6 +10,14 @@ export function CameraAnimator() {
     update: () => void;
   } | null;
 
+  // Keep live refs so the Zustand subscription (which is set up once)
+  // always sees the current camera / controls even if React hasn't
+  // re-run the effect after a resize / remount.
+  const cameraRef = useRef(camera);
+  const controlsRef = useRef(controls);
+  cameraRef.current = camera;
+  controlsRef.current = controls;
+
   // Animation state
   const startPos = useRef(new THREE.Vector3());
   const startTarget = useRef(new THREE.Vector3());
@@ -24,8 +32,7 @@ export function CameraAnimator() {
   const lastCameraTarget = useRef<string | null>(null);
 
   useEffect(() => {
-    // Reset tracking refs when camera/controls change (e.g. after canvas remount)
-    // or when the window resizes (orientation change, split-screen, etc).
+    // Reset tracking refs when the effect runs (mount or camera/controls change).
     // Without this, clicking the same preset button again won't trigger an animation
     // because the store values haven't changed and the refs still match them.
     lastPreset.current = '';
@@ -37,13 +44,17 @@ export function CameraAnimator() {
     };
 
     const unsub = useStore.subscribe((s) => {
+      const cam = cameraRef.current;
+      const ctrl = controlsRef.current;
+      if (!cam || !ctrl) return;
+
       const targetKey = s.cameraTarget
         ? `${s.cameraTarget.position.join(',')}-${s.cameraTarget.target.join(',')}`
         : null;
       if (s.activeCameraPreset !== lastPreset.current || targetKey !== lastCameraTarget.current) {
-        if (s.cameraTarget && controls) {
-          startPos.current.copy(camera.position);
-          startTarget.current.copy(controls.target);
+        if (s.cameraTarget) {
+          startPos.current.copy(cam.position);
+          startTarget.current.copy(ctrl.target);
           endPos.current.set(...s.cameraTarget.position);
           endTarget.current.set(...s.cameraTarget.target);
           progress.current = 0;
@@ -59,7 +70,11 @@ export function CameraAnimator() {
       unsub();
       window.removeEventListener('resize', resetTracking);
     };
-  }, [camera, controls]);
+    // We intentionally omit camera/controls from the dependency array.
+    // The subscription uses refs above, so it always sees the latest
+    // instances without tearing down and recreating the listener.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Expose camera/controls to window for visual test assertions
   useEffect(() => {

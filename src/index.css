@@ -601,6 +601,11 @@ html, body, #root {
 .viewport {
   flex: 1;
   position: relative;
+  /* Allow the viewport to shrink below its content width in a flex container.
+     Without min-width:0 the canvas can get “stuck” at its previous width
+     when the window is made smaller, which breaks the visible centre and
+     can make camera presets appear to go to the wrong position. */
+  min-width: 0;
 }
 
 /* Modal */
