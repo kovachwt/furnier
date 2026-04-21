@@ -61,6 +61,11 @@ export function CameraAnimator() {
     };
   }, [camera, controls]);
 
+  // Expose camera/controls to window for visual test assertions
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__r3fState = { camera, controls };
+  }, [camera, controls]);
+
   useFrame((_, delta) => {
     if (!animating.current || !controls) return;
 
