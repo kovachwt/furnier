@@ -5,13 +5,21 @@ interface ShortcutGroup {
 
 const groups: ShortcutGroup[] = [
   {
+    title: 'Selection',
+    shortcuts: [
+      { keys: 'Click', desc: 'Select single piece' },
+      { keys: 'Shift + Click', desc: 'Toggle piece in multi-select' },
+      { keys: 'Ctrl + A', desc: 'Select all pieces' },
+      { keys: 'Escape', desc: 'Clear selection (or close dialog)' },
+    ],
+  },
+  {
     title: 'Navigation',
     shortcuts: [
       { keys: 'Tab', desc: 'Select next piece' },
       { keys: 'Shift + Tab', desc: 'Select previous piece' },
       { keys: 'Enter', desc: 'Drill into components / next component' },
       { keys: 'Shift + Enter', desc: 'Previous component' },
-      { keys: 'Escape', desc: 'Back out (component → piece → deselect)' },
     ],
   },
   {
@@ -21,7 +29,7 @@ const groups: ShortcutGroup[] = [
       { keys: '↑ ↓', desc: 'Nudge Z by grid size' },
       { keys: 'Page Up / Down', desc: 'Nudge Y by grid size' },
       { keys: 'Shift + arrows', desc: 'Fine nudge (1 mm)' },
-      { keys: 'R', desc: 'Rotate selected piece 90°' },
+      { keys: 'R', desc: 'Rotate selected piece(s) 90°' },
     ],
   },
   {

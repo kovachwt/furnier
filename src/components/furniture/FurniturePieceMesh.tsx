@@ -72,12 +72,16 @@ function computeScaledDims(
 export function FurniturePieceMesh({ piece }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const selectedPieceId = useStore((s) => s.selectedPieceId);
+  const selectedPieceIds = useStore((s) => s.selectedPieceIds);
   const selectedComponentId = useStore((s) => s.selectedComponentId);
   const explodedView = useStore((s) => s.explodedView);
   const explodeFactor = useStore((s) => s.explodeFactor);
 
   const isSelected = selectedPieceId === piece.id;
-  const hasComponentSelected = isSelected && selectedComponentId != null &&
+  const isMultiSelected = selectedPieceIds.includes(piece.id) && selectedPieceIds.length > 1;
+  // The "primary" of a multi-selection is the first in the list — it owns the gizmo.
+  const isPrimaryOfMulti = isMultiSelected && selectedPieceIds[0] === piece.id;
+  const hasComponentSelected = isSelected && !isMultiSelected && selectedComponentId != null &&
     piece.components.some(c => c.id === selectedComponentId);
   const isMobile = useIsMobile();
 
@@ -85,8 +89,13 @@ export function FurniturePieceMesh({ piece }: Props) {
   const pieceGizmoScale = isMobile ? 0.65 : 0.4;
   const compGizmoScale = isMobile ? 0.4 : 0.25;
 
-  const canTransformPiece = isSelected && !hasComponentSelected && !explodedView;
-  const canTransformComponent = isSelected && hasComponentSelected && !explodedView && !piece.locked;
+  // Single piece: gizmo only on the selected piece with no component drilled in.
+  // Multi piece: gizmo only on the primary of the multi-selection.
+  const canTransformPiece = !explodedView && !piece.locked && (
+    (!isMultiSelected && isSelected && !hasComponentSelected) ||
+    isPrimaryOfMulti
+  );
+  const canTransformComponent = !explodedView && !piece.locked && hasComponentSelected;
 
   // --- Exploded view animation ---
   const explodeGroupRefs = useRef<Map<string, THREE.Group>>(new Map());
@@ -128,9 +137,12 @@ export function FurniturePieceMesh({ piece }: Props) {
   const dragStartPosRef = useRef<Vec3>([0, 0, 0]);
   const dragStartComponentsRef = useRef<Array<{ id: string; position: Vec3; dims: Record<string, number> }>>([]);
   const dragScaleCenterRef = useRef<Vec3>([0, 0, 0]);
+  // For multi-piece drag: starting positions of every selected piece
+  const groupDragStartRef = useRef<Map<string, Vec3>>(new Map());
 
   const handleDragStart = useCallback(() => {
-    const currentPiece = useStore.getState().project.pieces.find(p => p.id === piece.id);
+    const state = useStore.getState();
+    const currentPiece = state.project.pieces.find(p => p.id === piece.id);
     if (currentPiece) {
       dragStartPosRef.current = [...currentPiece.position] as Vec3;
       // Save component data for piece-level scaling
@@ -146,6 +158,16 @@ export function FurniturePieceMesh({ piece }: Props) {
           currentPiece.components.reduce((s, c) => s + c.position[1], 0) / n,
           currentPiece.components.reduce((s, c) => s + c.position[2], 0) / n,
         ] as Vec3;
+      }
+    }
+
+    // Capture starting positions of all selected pieces for group drag
+    groupDragStartRef.current.clear();
+    if (state.selectedPieceIds.length > 1 && state.selectedPieceIds[0] === piece.id) {
+      // We're dragging the primary of a multi-selection
+      for (const id of state.selectedPieceIds) {
+        const p = state.project.pieces.find(pp => pp.id === id);
+        if (p) groupDragStartRef.current.set(id, [...p.position] as Vec3);
       }
     }
   }, [piece.id]);
@@ -220,6 +242,25 @@ export function FurniturePieceMesh({ piece }: Props) {
 
     // Clamp Y >= 0 (don't go below floor)
     newPos[1] = Math.max(0, newPos[1]);
+
+    // --- Group drag: apply the same delta to all selected pieces ---
+    const groupStart = groupDragStartRef.current;
+    if (groupStart.size > 1 && groupStart.has(piece.id)) {
+      // Compute delta from primary's start to its new position
+      const dx = newPos[0] - startPos[0];
+      const dy = newPos[1] - startPos[1];
+      const dz = newPos[2] - startPos[2];
+      const positions: Record<string, Vec3> = {};
+      for (const [id, s] of groupStart.entries()) {
+        positions[id] = [
+          s[0] + dx,
+          Math.max(0, s[1] + dy),
+          s[2] + dz,
+        ];
+      }
+      state.setPiecesPositions(positions);
+      return;
+    }
 
     state.updatePiece(piece.id, { position: newPos });
   }, [piece.id, piece.components]);

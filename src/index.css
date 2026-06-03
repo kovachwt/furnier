@@ -422,6 +422,128 @@ html, body, #root {
   margin-bottom: 8px;
 }
 
+/* ═══════════════════════════════════════════════════
+   Multi-select & alignment UI
+   ═══════════════════════════════════════════════════ */
+
+.multi-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+  line-height: 1.4;
+}
+
+.piece-item.multi.selected {
+  /* Multi-selected but not the primary: muted highlight */
+  background: rgba(74, 158, 255, 0.08);
+  border-color: rgba(74, 158, 255, 0.6);
+  border-style: dashed;
+}
+
+.piece-item.selected:not(.multi) {
+  /* Primary selection: solid accent border */
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.15);
+  border-style: solid;
+}
+
+.multi-select-actions {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.multi-select-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.multi-select-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.multi-select-pos {
+  color: var(--text-secondary);
+  font-family: monospace;
+  font-size: 10px;
+}
+
+/* Alignment & distribution panel */
+.align-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.align-row-label {
+  flex: 0 0 18px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.align-grid {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.align-btn {
+  flex: 1;
+  height: 28px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.align-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.align-btn:active {
+  transform: scale(0.95);
+}
+
+.align-wall-grid,
+.align-distribute-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.align-wall-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
 .comp-editor {
   margin-top: 12px;
   padding-top: 12px;

@@ -13,13 +13,23 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 export function MobileControls() {
   const isMobile = useIsMobile();
   const selectedPieceId = useStore((s) => s.selectedPieceId);
+  const selectedPieceIds = useStore((s) => s.selectedPieceIds);
   const gridSize = useStore((s) => s.gridSize);
   const nudgeSelectedPiece = useStore((s) => s.nudgeSelectedPiece);
   const rotateSelectedPiece = useStore((s) => s.rotateSelectedPiece);
   const clearSelection = useStore((s) => s.clearSelection);
   const removePiece = useStore((s) => s.removePiece);
+  const deletePieces = useStore((s) => s.deletePieces);
 
   if (!isMobile || !selectedPieceId) return null;
+
+  const handleDelete = () => {
+    if (selectedPieceIds.length > 1) {
+      deletePieces(selectedPieceIds);
+    } else if (selectedPieceId) {
+      removePiece(selectedPieceId);
+    }
+  };
 
   const step = gridSize;
 
@@ -59,8 +69,8 @@ export function MobileControls() {
         </button>
         <button
           className="mobile-action-btn mobile-action-btn--danger"
-          onClick={() => removePiece(selectedPieceId)}
-          title="Delete piece"
+          onClick={handleDelete}
+          title={selectedPieceIds.length > 1 ? `Delete ${selectedPieceIds.length} pieces` : 'Delete piece'}
         >
           🗑 Delete
         </button>
