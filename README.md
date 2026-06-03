@@ -109,13 +109,27 @@ All defined with standard sheet sizes (2440×1220mm) and grain direction flag.
 - Delete key removes selected piece or component
 - Escape to deselect
 
+### Multi-select & Alignment
+Select multiple pieces and transform them as a group, the way you'd expect in any vector editor:
+
+- **Shift+click** a piece in the 3D viewport or the piece list to add it to the selection. A plain click selects a single piece.
+- **Ctrl+A** selects everything; **Esc** clears.
+- The primary piece (first selected) owns the gizmo. **Drag it to move all selected pieces together**; arrow keys nudge and **R** rotates the whole group.
+- The **Align & Distribute** sidebar panel (visible when 2+ pieces are selected) provides a 3×3 grid of align buttons (axis × min/center/max), a "To Wall" row (snap all selected to left/right/back/front walls or floor/ceiling), and a "Distribute Evenly" row (3+ pieces) for evenly spacing pieces along an axis.
+- A light-blue wireframe bounds the whole selection while it's active.
+
+See [docs/multi-select-alignment.md](docs/multi-select-alignment.md) for the full breakdown.
+
 ## Keyboard Shortcuts
 
 ```
 Ctrl+Z          Undo
 Ctrl+Y          Redo
-Delete/Backspace Remove selected piece or component
+Delete/Backspace Remove selected piece(s) or component
 Escape           Deselect all
+Ctrl+A           Select all pieces
+Shift+Click      Toggle piece in multi-selection
+R                Rotate selected piece(s) 90°
 ```
 
 ## Tech Stack
@@ -142,20 +156,22 @@ src/
     cutlist.ts                Guillotine bin-packing, BOM generation
     pdfExport.ts              PDF generation (cut list, BOM, assembly) via jsPDF
     sharing.ts                URL-based project sharing (deflate + base64url in hash)
+    alignment.ts              Multi-select AABB, align-to-wall, distribute math
   components/
-    Scene.tsx                 R3F Canvas, lighting, camera
+    Scene.tsx                 R3F Canvas, lighting, camera, multi-select wireframe
     room/RoomBox.tsx          Room walls, floor, grid, dimension labels
     furniture/
-      FurniturePieceMesh.tsx  Piece group with PivotControls
-      PanelMesh.tsx           Rendered panel (box with edges)
-      LegMesh.tsx             Rendered leg (cylinder/box)
+      FurniturePieceMesh.tsx  Piece group with PivotControls + group drag
+      PanelMesh.tsx           Rendered panel (box with edges, shift-click selects)
+      LegMesh.tsx             Rendered leg (cylinder/box, shift-click selects)
       HardwareMesh.tsx        Rendered hinges, slides, shelf pins
     ui/
       Toolbar.tsx             Top toolbar (tools, undo/redo, toggles)
       RoomSettings.tsx        Room dimension inputs
       AddFurniture.tsx        Template selector and parameters
-      PieceList.tsx           List of all pieces in the project
+      PieceList.tsx           List of all pieces, multi-select support
       PieceEditor.tsx         Selected piece/component property editor
+      AlignmentPanel.tsx      Align & distribute controls (visible for 2+ selected)
       ProjectActions.tsx      Save/load/reset/share buttons
       ShareDialog.tsx        Confirmation dialog for loading shared projects from URL
     cutlist/
