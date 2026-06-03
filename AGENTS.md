@@ -157,10 +157,14 @@ Edit `const S = 0.001` in `components/room/RoomBox.tsx`. Every 3D component uses
 `playwright/` holds the committed suite. Each test has its own subfolder with a `test.cjs` and a `baseline.png`. The runner starts a dedicated Vite dev server on port 5179 (so it won't collide with your `npm run dev` on 5173), drives Chromium, screenshots the viewport, and diffs via pixelmatch.
 
 ```bash
-npm run test:visual                 # run all
-npm run test:visual -- add-cabinet  # run one
+npm run test:visual                 # run all 27 tests (~3-5 min)
+npm run test:visual:core            # fast subset, 21 tests (~2-3 min) — the daily driver
+npm run test:visual:extended        # slow subset, 6 tests (align/distribute/undo/search/multi-select)
+npm run test:visual -- add-cabinet  # run one specific test
 npm run test:visual:update          # re-record baselines after intentional changes
 ```
+
+Tests are tagged with a `tier: 'core' | 'extended'` field in their `test.cjs`. Default is `core`. See `playwright/README.md` for the full tier policy and per-test timing output.
 
 See `playwright/README.md` for layout, thresholds, and failure artifacts (`actual.png`, `diff.png`).
 

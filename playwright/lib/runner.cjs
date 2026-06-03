@@ -80,6 +80,7 @@ async function loadTest(folder) {
   return {
     name: mod.name || path.basename(folder),
     description: mod.description || '',
+    tier: mod.tier || 'core',
     viewport: mod.viewport || { width: 1280, height: 900 },
     action: mod.action,
     folder,
@@ -112,7 +113,7 @@ async function runTest(folder, { url, browser, update = false, verbose = false }
       await test.action(page, appHelpers);
     }
     // One last settle to let any pending frames paint.
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(200);
     await page.screenshot({ path: actualFile, fullPage: false });
   } finally {
     await context.close();

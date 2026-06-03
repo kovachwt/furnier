@@ -15,6 +15,7 @@
 
 module.exports = {
   name: 'align-pieces',
+  tier: 'extended', // 3 addPiece() calls; ~18s
   description: 'Align X centers of 3 cabinets \u2014 all should end up at the same X',
   action: async (page, app) => {
     // Three cabinets at different X positions

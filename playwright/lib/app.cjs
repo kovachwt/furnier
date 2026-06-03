@@ -4,8 +4,13 @@
 // (open the app, add a piece, toggle a tool). Keeping UI selectors
 // centralized here means if the UI changes we update one file
 // instead of N tests.
+//
+// SCENE_SETTLE_MS is the time we wait for the R3F scene to render
+// and stabilize after each significant state change (page load, add
+// piece). Tests that need longer (e.g. for an animation to complete)
+// do their own `waitForTimeout` on top of this.
 
-const SCENE_SETTLE_MS = 2500;
+const SCENE_SETTLE_MS = 1500;
 
 async function openApp(page, url) {
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });

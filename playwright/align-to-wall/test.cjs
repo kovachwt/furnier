@@ -6,6 +6,7 @@
 
 module.exports = {
   name: 'align-to-wall',
+  tier: 'extended', // 3 addPiece() calls; ~18s
   description: 'Align 3 pieces to the back wall \u2014 all back-edges at Z = -1500',
   action: async (page, app) => {
     // Three cabinets at default (Z=0)

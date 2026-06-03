@@ -36,6 +36,12 @@ node playwright/run.cjs add-cabinet
 # Run a handful of tests
 node playwright/run.cjs empty-room add-cabinet add-desk
 
+# Run only the fast core subset (~2-3 min)
+node playwright/run.cjs --tier=core
+
+# Run only the slower extended subset
+node playwright/run.cjs --tier=extended
+
 # Regenerate baselines after an intentional visual change
 node playwright/run.cjs --update
 node playwright/run.cjs add-cabinet --update
@@ -47,9 +53,45 @@ node playwright/run.cjs --keep-server
 node playwright/run.cjs --verbose
 ```
 
+Convenience npm scripts:
+
+```bash
+npm run test:visual           # all 27 tests
+npm run test:visual:core      # 21 fast tests (~2-3 min) — the daily driver
+npm run test:visual:extended  # 6 slower tests (align, distribute, undo, search, multi-select)
+npm run test:visual:update    # regenerate all baselines
+```
+
 Exit code is `0` when every test passes, `1` otherwise.
 
 The runner starts `vite` on `127.0.0.1:5173` if nothing is listening, and reuses an already-running dev server if there is one (so it won't trample a shell you already have open).
+
+## Tiers
+
+Tests are tagged with a `tier` field so the runner can skip the slow
+ones during iteration:
+
+- `'core'` (default) — the fast subset, ~2–3 min total. Covers the
+  most common user paths and the features most likely to regress
+  (templates, theme, mobile, screenshots, rotate, clash, etc.).
+- `'extended'` — slower tests that exercise multi-piece flows. These
+  do 3 `addPiece()` calls or have long action sequences, and each
+  takes 15–22 s on its own.
+
+Pick a tier based on how many `addPiece()` calls your test makes:
+
+| `addPiece()` count | Suggested tier |
+| ------------------ | -------------- |
+| 0–1                | `core`         |
+| 2                  | `core` if the action is short, else `extended` |
+| 3+                 | `extended`     |
+
+If you forget to set it, the test defaults to `core` (the safe choice
+for iteration). Move a test to `extended` once you know it's slow.
+
+You can also bypass the tier system by passing test names on the
+command line — `node playwright/run.cjs add-cabinet undo-redo` runs
+exactly those two regardless of tier.
 
 ## How a test is defined
 
@@ -58,6 +100,7 @@ A test is a CommonJS module at `playwright/<name>/test.cjs`:
 ```js
 module.exports = {
   name: 'add-cabinet',                       // optional, defaults to folder name
+  tier: 'core',                              // optional, defaults to 'core'
   description: 'Add a default open cabinet', // optional, documentation only
   viewport: { width: 1280, height: 900 },    // optional, this is the default
   action: async (page, app) => {
@@ -106,7 +149,7 @@ Both files are ignored by git (see `.gitignore`). On the next pass they are dele
 `playwright/lib/runner.cjs` controls tolerance:
 
 - **`PIXEL_THRESHOLD = 0.15`** — per-pixel color tolerance passed to pixelmatch.
-- **`MAX_DIFF_RATIO = 0.005`** — up to 0.5% of pixels may differ before the test fails.
+- **`MAX_DIFF_RATIO = 0.02`** — up to 2% of pixels may differ before the test fails.
 
 WebGL output on headless Chromium is not bit-exact across machines/GPU drivers. If you see flaky failures of ≤0.5% on CI that are unreproducible locally, bump `MAX_DIFF_RATIO` rather than chase ghost pixels.
 

@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:visual": "node playwright/run.cjs",
+    "test:visual:core": "node playwright/run.cjs --tier=core",
+    "test:visual:extended": "node playwright/run.cjs --tier=extended",
     "test:visual:update": "node playwright/run.cjs --update"
   },
   "dependencies": {

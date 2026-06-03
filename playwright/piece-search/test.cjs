@@ -4,6 +4,7 @@
 
 module.exports = {
   name: 'piece-search',
+  tier: 'extended', // 3 addPiece() calls; ~18s
   description: 'Search/filter pieces in the PieceList sidebar',
   viewport: { width: 1280, height: 900 },
   action: async (page, app) => {

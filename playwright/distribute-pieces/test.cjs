@@ -9,6 +9,7 @@
 
 module.exports = {
   name: 'distribute-pieces',
+  tier: 'extended', // 3 addPiece() calls; ~19s
   description: 'Distribute 3 cabinets evenly along X axis',
   action: async (page, app) => {
     // Add 3 cabinets (all default X=0)

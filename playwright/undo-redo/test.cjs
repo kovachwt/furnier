@@ -15,6 +15,7 @@ const countPieces = async (page) => {
 
 module.exports = {
   name: 'undo-redo',
+  tier: 'extended', // 2 addPiece() + 4 SCENE_SETTLE_MS waits; ~22s
   description: 'Undo removes a piece, redo restores it (Ctrl+Z / Ctrl+Y)',
   action: async (page, app) => {
     // Step 1: empty room (already in this state from openApp)

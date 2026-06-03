@@ -9,6 +9,7 @@
 
 module.exports = {
   name: 'multi-select',
+  tier: 'extended', // 3 addPiece() calls; ~15s
   description: 'Three pieces selected via shift+click \u2014 alignment panel visible',
   action: async (page, app) => {
     // Three cabinets in a row at different positions
