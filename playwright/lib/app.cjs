@@ -10,7 +10,7 @@
 // piece). Tests that need longer (e.g. for an animation to complete)
 // do their own `waitForTimeout` on top of this.
 
-const SCENE_SETTLE_MS = 1500;
+const SCENE_SETTLE_MS = 1000;
 
 async function openApp(page, url) {
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });
