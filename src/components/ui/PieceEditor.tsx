@@ -8,12 +8,15 @@ import type {
 
 export function PieceEditor() {
   const selectedPieceId = useStore((s) => s.selectedPieceId);
+  const selectedPieceIds = useStore((s) => s.selectedPieceIds);
   const selectedComponentId = useStore((s) => s.selectedComponentId);
   const pieces = useStore((s) => s.project.pieces);
   const materials = useStore((s) => s.project.materials);
   const updatePiece = useStore((s) => s.updatePiece);
   const removePiece = useStore((s) => s.removePiece);
   const duplicatePiece = useStore((s) => s.duplicatePiece);
+  const duplicatePieces = useStore((s) => s.duplicatePieces);
+  const deletePieces = useStore((s) => s.deletePieces);
   const updateComponent = useStore((s) => s.updateComponent);
   const removeComponent = useStore((s) => s.removeComponent);
   const addComponent = useStore((s) => s.addComponent);
@@ -21,6 +24,35 @@ export function PieceEditor() {
   const pushHistory = useStore((s) => s.pushHistory);
 
   const piece = pieces.find((p) => p.id === selectedPieceId);
+
+  // Multi-selection summary
+  if (!piece && selectedPieceIds.length > 1) {
+    const multiPieces = pieces.filter((p) => selectedPieceIds.includes(p.id));
+    return (
+      <div className="panel-section">
+        <h3>{selectedPieceIds.length} pieces selected</h3>
+        <div className="multi-select-summary">
+          {multiPieces.map((p) => (
+            <div key={p.id} className="multi-select-summary-row">
+              <span>{p.isFixture ? '📌 ' : ''}{p.name}</span>
+              <span className="multi-select-pos">
+                {Math.round(p.position[0])}, {Math.round(p.position[1])}, {Math.round(p.position[2])}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="btn-row" style={{ marginTop: 10 }}>
+          <button className="btn-secondary" onClick={() => duplicatePieces(selectedPieceIds)}>
+            ⧉ Duplicate All
+          </button>
+          <button className="btn-danger" onClick={() => deletePieces(selectedPieceIds)}>
+            ✕ Delete All
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!piece) return null;
 
   const selectedComp = piece.components.find((c) => c.id === selectedComponentId);

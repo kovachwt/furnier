@@ -10,6 +10,7 @@ import { CameraAnimator } from './CameraAnimator';
 import { ViewportCapture } from './ViewportCapture';
 import { ClashVisualization } from './ClashVisualization';
 import type { Vec3 } from '../types';
+import { getPiecesWorldBounds } from '../utils/alignment';
 
 /** Compute the center X/Z of a piece's components in mm (local to piece origin). */
 function getPieceLocalCenter(piece: { components: Array<{ position: Vec3; type: string }> }): { cx: number; cz: number } {
@@ -20,6 +21,84 @@ function getPieceLocalCenter(piece: { components: Array<{ position: Vec3; type: 
     n++;
   }
   return n > 0 ? { cx: cx / n, cz: cz / n } : { cx: 0, cz: 0 };
+}
+
+/**
+ * Wireframe bounding box around all selected pieces. Visible only when
+ * 2+ pieces are selected. Renders a 12-edge AABB at a slightly raised
+ * Y offset so it doesn't z-fight with the floor.
+ */
+function MultiSelectBounds() {
+  const selectedPieceIds = useStore((s) => s.selectedPieceIds);
+  const pieces = useStore((s) => s.project.pieces);
+
+  if (selectedPieceIds.length < 2) return null;
+
+  const selectedPieces = pieces.filter((p) => selectedPieceIds.includes(p.id));
+  if (selectedPieces.length < 2) return null;
+
+  const bounds = getPiecesWorldBounds(selectedPieces);
+  const minX = mmToWorld(bounds.min[0]);
+  const minY = mmToWorld(Math.max(0, bounds.min[1]));
+  const minZ = mmToWorld(bounds.min[2]);
+  const maxX = mmToWorld(bounds.max[0]);
+  const maxY = mmToWorld(bounds.max[1]);
+  const maxZ = mmToWorld(bounds.max[2]);
+
+  // 12 edges of an axis-aligned box
+  const edges: [number, number, number][][] = [
+    // bottom rectangle
+    [[minX, minY, minZ], [maxX, minY, minZ]],
+    [[maxX, minY, minZ], [maxX, minY, maxZ]],
+    [[maxX, minY, maxZ], [minX, minY, maxZ]],
+    [[minX, minY, maxZ], [minX, minY, minZ]],
+    // top rectangle
+    [[minX, maxY, minZ], [maxX, maxY, minZ]],
+    [[maxX, maxY, minZ], [maxX, maxY, maxZ]],
+    [[maxX, maxY, maxZ], [minX, maxY, maxZ]],
+    [[minX, maxY, maxZ], [minX, maxY, minZ]],
+    // vertical edges
+    [[minX, minY, minZ], [minX, maxY, minZ]],
+    [[maxX, minY, minZ], [maxX, maxY, minZ]],
+    [[maxX, minY, maxZ], [maxX, maxY, maxZ]],
+    [[minX, minY, maxZ], [minX, maxY, maxZ]],
+  ];
+
+  return (
+    <>
+      {edges.map((pts, i) => (
+        <Line
+          key={i}
+          points={pts}
+          color="#60a5fa"
+          lineWidth={1.5}
+          transparent
+          opacity={0.7}
+        />
+      ))}
+      {/* Centroid marker — a small cross at the combined center on the floor */}
+      <Line
+        points={[
+          [mmToWorld(bounds.center[0]) - 0.05, minY + 0.001, mmToWorld(bounds.center[2])],
+          [mmToWorld(bounds.center[0]) + 0.05, minY + 0.001, mmToWorld(bounds.center[2])],
+        ]}
+        color="#60a5fa"
+        lineWidth={2}
+        transparent
+        opacity={0.9}
+      />
+      <Line
+        points={[
+          [mmToWorld(bounds.center[0]), minY + 0.001, mmToWorld(bounds.center[2]) - 0.05],
+          [mmToWorld(bounds.center[0]), minY + 0.001, mmToWorld(bounds.center[2]) + 0.05],
+        ]}
+        color="#60a5fa"
+        lineWidth={2}
+        transparent
+        opacity={0.9}
+      />
+    </>
+  );
 }
 
 /** Smart guides: show magenta center-alignment lines for the selected piece. */
@@ -228,6 +307,7 @@ export function Scene() {
 
       <SnapGuides />
       <SmartGuides />
+      <MultiSelectBounds />
       <ClashVisualization />
 
       <OrbitControls

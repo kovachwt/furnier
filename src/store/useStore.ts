@@ -5,11 +5,20 @@ import { v4 as uuid } from 'uuid';
 import type {
   Project, Room, FurniturePiece, Component, Material,
   ParametricConstraint, CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
-  FixtureBoxParams, FixtureCylinderParams,
+  FixtureBoxParams, FixtureCylinderParams, Vec3,
 } from '../types';
 import type { SnapLine } from '../utils/snap';
 import type { ClashPair } from '../utils/clashDetection';
 import { createCabinet, createBookshelf, createDesk, createDresser, createDoorCabinet, createFixtureBox, createFixtureCylinder } from '../utils/templates';
+import {
+  computeAlignedPositions,
+  computeDistributedPositions,
+  getPiecesWorldBounds,
+  getWallPlane,
+  type AxisName,
+  type AlignMode,
+  type WallName,
+} from '../utils/alignment';
 
 const DEFAULT_MATERIALS: Material[] = [
   // --- Melamine-faced chipboard (European standard 2800×2070) ---
@@ -253,6 +262,7 @@ interface AppState {
 
   // UI state
   selectedPieceId: string | null;
+  selectedPieceIds: string[]; // multi-selection (always includes selectedPieceId)
   selectedComponentId: string | null;
   activeCameraPreset: string;
   cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
@@ -319,6 +329,22 @@ interface AppState {
   selectNextComponent: () => void;
   selectPrevComponent: () => void;
 
+  // Multi-selection
+  setMultiSelection: (ids: string[], primaryId?: string) => void;
+  togglePieceInSelection: (id: string) => void;
+  selectAllPieces: () => void;
+  isPieceSelected: (id: string) => boolean;
+
+  // Multi-piece operations
+  alignPieces: (ids: string[], axis: AxisName, mode: AlignMode) => void;
+  alignPiecesToWall: (ids: string[], wall: WallName) => void;
+  distributePieces: (ids: string[], axis: AxisName) => void;
+  duplicatePieces: (ids: string[]) => string[];
+  deletePieces: (ids: string[]) => void;
+  rotatePiecesBy: (ids: string[], angleDeg: number) => void;
+  nudgePieces: (ids: string[], dx: number, dy: number, dz: number) => void;
+  setPiecesPositions: (positions: Record<string, Vec3>) => void;
+
   // Movement
   nudgeSelectedPiece: (dx: number, dy: number, dz: number) => void;
   rotateSelectedPiece: (angleDeg: number) => void;
@@ -363,6 +389,7 @@ export const useStore = create<AppState>()(
     },
 
     selectedPieceId: null,
+    selectedPieceIds: [],
     selectedComponentId: null,
     activeCameraPreset: 'iso',
     cameraTarget: null,
@@ -404,8 +431,16 @@ export const useStore = create<AppState>()(
     removePiece: (id) => {
       set(produce((s: AppState) => {
         s.project.pieces = s.project.pieces.filter((p) => p.id !== id);
+        s.selectedPieceIds = s.selectedPieceIds.filter((pid) => pid !== id);
         if (s.selectedPieceId === id) {
           s.selectedPieceId = null;
+          s.selectedComponentId = null;
+        }
+        // If the primary was the one removed, fall back to the first remaining
+        if (!s.selectedPieceId && s.selectedPieceIds.length > 0) {
+          s.selectedPieceId = s.selectedPieceIds[0];
+        }
+        if (s.selectedPieceIds.length === 0) {
           s.selectedComponentId = null;
         }
       }));
@@ -419,26 +454,8 @@ export const useStore = create<AppState>()(
       })),
 
     duplicatePiece: (id) => {
-      const state = get();
-      const piece = state.project.pieces.find((p) => p.id === id);
-      if (!piece) return null;
-      const newId = uuid();
-      set(produce((s: AppState) => {
-        const clone: FurniturePiece = JSON.parse(JSON.stringify(piece));
-        clone.id = newId;
-        clone.name = piece.name + ' (copy)';
-        clone.position = [
-          piece.position[0] + 200,
-          piece.position[1],
-          piece.position[2],
-        ];
-        clone.components = clone.components.map((c) => ({ ...c, id: uuid() }));
-        // Clear constraints (component IDs changed)
-        clone.constraints = [];
-        s.project.pieces.push(clone);
-      }));
-      get().pushHistory();
-      return newId;
+      const newIds = get().duplicatePieces([id]);
+      return newIds[0] ?? null;
     },
 
     regeneratePiece: (id, params) => {
@@ -602,22 +619,75 @@ export const useStore = create<AppState>()(
       })),
 
     setSelection: (pieceId, componentId = null) =>
-      set({ selectedPieceId: pieceId, selectedComponentId: componentId }),
+      set({
+        selectedPieceId: pieceId,
+        selectedPieceIds: pieceId ? [pieceId] : [],
+        selectedComponentId: componentId,
+      }),
 
     clearSelection: () =>
-      set({ selectedPieceId: null, selectedComponentId: null }),
+      set({ selectedPieceId: null, selectedPieceIds: [], selectedComponentId: null }),
+
+    setMultiSelection: (ids, primaryId) => {
+      // Deduplicate, drop unknown IDs, keep order, ensure primaryId is first
+      const validIds = ids.filter((id) => get().project.pieces.some((p) => p.id === id));
+      const unique = Array.from(new Set(validIds));
+      const primary = primaryId && unique.includes(primaryId)
+        ? primaryId
+        : (unique[0] ?? null);
+      const ordered = primary ? [primary, ...unique.filter((id) => id !== primary)] : unique;
+      set({
+        selectedPieceId: primary,
+        selectedPieceIds: ordered,
+        selectedComponentId: null,
+      });
+    },
+
+    togglePieceInSelection: (id) => {
+      const state = get();
+      if (!state.project.pieces.some((p) => p.id === id)) return;
+      const current = state.selectedPieceIds;
+      if (current.includes(id)) {
+        const next = current.filter((pid) => pid !== id);
+        const newPrimary = state.selectedPieceId === id
+          ? (next[0] ?? null)
+          : state.selectedPieceId;
+        set({
+          selectedPieceId: newPrimary,
+          selectedPieceIds: next,
+          selectedComponentId: newPrimary ? null : null,
+        });
+      } else {
+        set({
+          selectedPieceId: id,
+          selectedPieceIds: [...current, id],
+          selectedComponentId: null,
+        });
+      }
+    },
+
+    selectAllPieces: () => {
+      const ids = get().project.pieces.map((p) => p.id);
+      set({
+        selectedPieceId: ids[0] ?? null,
+        selectedPieceIds: ids,
+        selectedComponentId: null,
+      });
+    },
+
+    isPieceSelected: (id) => get().selectedPieceIds.includes(id),
 
     selectNextPiece: () => {
       const { project, selectedPieceId } = get();
       const pieces = project.pieces;
       if (pieces.length === 0) return;
       if (!selectedPieceId) {
-        set({ selectedPieceId: pieces[0].id, selectedComponentId: null });
+        set({ selectedPieceId: pieces[0].id, selectedPieceIds: [pieces[0].id], selectedComponentId: null });
         return;
       }
       const idx = pieces.findIndex((p) => p.id === selectedPieceId);
       const next = (idx + 1) % pieces.length;
-      set({ selectedPieceId: pieces[next].id, selectedComponentId: null });
+      set({ selectedPieceId: pieces[next].id, selectedPieceIds: [pieces[next].id], selectedComponentId: null });
     },
 
     selectPrevPiece: () => {
@@ -625,12 +695,12 @@ export const useStore = create<AppState>()(
       const pieces = project.pieces;
       if (pieces.length === 0) return;
       if (!selectedPieceId) {
-        set({ selectedPieceId: pieces[pieces.length - 1].id, selectedComponentId: null });
+        set({ selectedPieceId: pieces[pieces.length - 1].id, selectedPieceIds: [pieces[pieces.length - 1].id], selectedComponentId: null });
         return;
       }
       const idx = pieces.findIndex((p) => p.id === selectedPieceId);
       const prev = (idx - 1 + pieces.length) % pieces.length;
-      set({ selectedPieceId: pieces[prev].id, selectedComponentId: null });
+      set({ selectedPieceId: pieces[prev].id, selectedPieceIds: [pieces[prev].id], selectedComponentId: null });
     },
 
     selectNextComponent: () => {
@@ -662,20 +732,27 @@ export const useStore = create<AppState>()(
     },
 
     rotateSelectedPiece: (angleDeg) => {
-      const { selectedPieceId, project } = get();
-      if (!selectedPieceId) return;
-      const piece = project.pieces.find((p) => p.id === selectedPieceId);
-      if (!piece || piece.locked) return;
+      const { selectedPieceIds } = get();
+      if (selectedPieceIds.length === 0) return;
+      get().rotatePiecesBy(selectedPieceIds, angleDeg);
+    },
+
+    nudgeSelectedPiece: (dx, dy, dz) => {
+      const { selectedPieceIds } = get();
+      if (selectedPieceIds.length === 0) return;
+      get().nudgePieces(selectedPieceIds, dx, dy, dz);
+    },
+
+    rotatePiecesBy: (ids, angleDeg) => {
+      if (ids.length === 0) return;
       const angleRad = (angleDeg * Math.PI) / 180;
       set(produce((s: AppState) => {
-        const p = s.project.pieces.find((p) => p.id === selectedPieceId);
-        if (p) {
-          // Rotate around Y axis (vertical)
+        for (const id of ids) {
+          const p = s.project.pieces.find((pp) => pp.id === id);
+          if (!p || p.locked) continue;
           p.rotation[1] += angleRad;
-          // Normalize to [0, 2π)
           p.rotation[1] = p.rotation[1] % (2 * Math.PI);
           if (p.rotation[1] < 0) p.rotation[1] += 2 * Math.PI;
-          // Also rotate all child components around Y
           for (const c of p.components) {
             c.rotation[1] += angleRad;
             c.rotation[1] = c.rotation[1] % (2 * Math.PI);
@@ -686,19 +763,112 @@ export const useStore = create<AppState>()(
       get().pushHistory();
     },
 
-    nudgeSelectedPiece: (dx, dy, dz) => {
-      const { selectedPieceId, project } = get();
-      if (!selectedPieceId) return;
-      const piece = project.pieces.find((p) => p.id === selectedPieceId);
-      if (!piece || piece.locked) return;
+    nudgePieces: (ids, dx, dy, dz) => {
+      if (ids.length === 0) return;
       set(produce((s: AppState) => {
-        const p = s.project.pieces.find((p) => p.id === selectedPieceId);
-        if (p) {
+        for (const id of ids) {
+          const p = s.project.pieces.find((pp) => pp.id === id);
+          if (!p || p.locked) continue;
           p.position = [
             p.position[0] + dx,
             Math.max(0, p.position[1] + dy),
             p.position[2] + dz,
           ];
+        }
+      }));
+      get().pushHistory();
+    },
+
+    setPiecesPositions: (positions) => {
+      set(produce((s: AppState) => {
+        for (const [id, pos] of Object.entries(positions)) {
+          const p = s.project.pieces.find((pp) => pp.id === id);
+          if (!p || p.locked) continue;
+          p.position = [
+            pos[0],
+            Math.max(0, pos[1]),
+            pos[2],
+          ];
+        }
+      }));
+      get().pushHistory();
+    },
+
+    alignPieces: (ids, axis, mode) => {
+      if (ids.length < 2) return;
+      const pieces = get().project.pieces.filter((p) => ids.includes(p.id));
+      if (pieces.length < 2) return;
+      const combined = getPiecesWorldBounds(pieces);
+      const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+      let target: number;
+      switch (mode) {
+        case 'min':    target = combined.min[idx]; break;
+        case 'center': target = combined.center[idx]; break;
+        case 'max':    target = combined.max[idx]; break;
+      }
+      const positions = computeAlignedPositions(pieces, axis, mode, target);
+      get().setPiecesPositions(positions);
+    },
+
+    alignPiecesToWall: (ids, wall) => {
+      if (ids.length === 0) return;
+      const pieces = get().project.pieces.filter((p) => ids.includes(p.id));
+      if (pieces.length === 0) return;
+      const wallAxis = getWallPlane(get().project.room, wall);
+
+      // Choose mode: 'min' for left/back/floor (align min edge to wall),
+      // 'max' for right/front/ceiling (align max edge to wall).
+      const mode: AlignMode = (wall === 'left' || wall === 'back' || wall === 'floor') ? 'min' : 'max';
+
+      const positions = computeAlignedPositions(pieces, wallAxis.axis, mode, wallAxis.value);
+      get().setPiecesPositions(positions);
+    },
+
+    distributePieces: (ids, axis) => {
+      if (ids.length < 3) return;
+      const pieces = get().project.pieces.filter((p) => ids.includes(p.id));
+      if (pieces.length < 3) return;
+      const positions = computeDistributedPositions(pieces, axis, 'center');
+      if (Object.keys(positions).length === 0) return;
+      get().setPiecesPositions(positions);
+    },
+
+    duplicatePieces: (ids) => {
+      const state = get();
+      const sourcePieces = state.project.pieces.filter((p) => ids.includes(p.id));
+      if (sourcePieces.length === 0) return [];
+      const newIds: string[] = [];
+      set(produce((s: AppState) => {
+        for (const piece of sourcePieces) {
+          const newId = uuid();
+          newIds.push(newId);
+          const clone: FurniturePiece = JSON.parse(JSON.stringify(piece));
+          clone.id = newId;
+          clone.name = piece.name + ' (copy)';
+          clone.position = [
+            piece.position[0] + 200,
+            piece.position[1],
+            piece.position[2],
+          ];
+          clone.components = clone.components.map((c) => ({ ...c, id: uuid() }));
+          clone.constraints = [];
+          s.project.pieces.push(clone);
+        }
+      }));
+      get().pushHistory();
+      return newIds;
+    },
+
+    deletePieces: (ids) => {
+      set(produce((s: AppState) => {
+        const idSet = new Set(ids);
+        s.project.pieces = s.project.pieces.filter((p) => !idSet.has(p.id));
+        s.selectedPieceIds = s.selectedPieceIds.filter((pid) => !idSet.has(pid));
+        if (s.selectedPieceId && idSet.has(s.selectedPieceId)) {
+          s.selectedPieceId = s.selectedPieceIds[0] ?? null;
+        }
+        if (s.selectedPieceIds.length === 0) {
+          s.selectedComponentId = null;
         }
       }));
       get().pushHistory();
@@ -744,6 +914,7 @@ export const useStore = create<AppState>()(
           s.historyIndex--;
           s.project.pieces = JSON.parse(JSON.stringify(s.history[s.historyIndex].pieces));
           s.selectedPieceId = null;
+          s.selectedPieceIds = [];
           s.selectedComponentId = null;
         }
       })),
@@ -754,6 +925,7 @@ export const useStore = create<AppState>()(
           s.historyIndex++;
           s.project.pieces = JSON.parse(JSON.stringify(s.history[s.historyIndex].pieces));
           s.selectedPieceId = null;
+          s.selectedPieceIds = [];
           s.selectedComponentId = null;
         }
       })),
@@ -769,6 +941,7 @@ export const useStore = create<AppState>()(
         set({
           project,
           selectedPieceId: null,
+          selectedPieceIds: [],
           selectedComponentId: null,
           history: [{ pieces: JSON.parse(JSON.stringify(project.pieces)) }],
           historyIndex: 0,
@@ -788,6 +961,7 @@ export const useStore = create<AppState>()(
           materials: [...DEFAULT_MATERIALS],
         },
         selectedPieceId: null,
+        selectedPieceIds: [],
         selectedComponentId: null,
         history: [{ pieces: initialPieces }],
         historyIndex: 0,
@@ -815,6 +989,9 @@ try {
     if (project.room && project.pieces && project.materials) {
       useStore.setState({
         project,
+        selectedPieceId: null,
+        selectedPieceIds: [],
+        selectedComponentId: null,
         history: [{ pieces: JSON.parse(JSON.stringify(project.pieces)) } as HistoryEntry],
         historyIndex: 0,
       });

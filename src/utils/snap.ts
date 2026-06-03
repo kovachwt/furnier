@@ -16,7 +16,7 @@ export interface SnapLine {
  * Compute axis-aligned bounding box half-extents after rotation.
  * Uses XYZ Euler order (Three.js default): R = Rz * Ry * Rx
  */
-function getAABBHalfExtents(w: number, h: number, d: number, rotation: Vec3): [number, number, number] {
+export function getAABBHalfExtents(w: number, h: number, d: number, rotation: Vec3): [number, number, number] {
   const [rx, ry, rz] = rotation;
   const cx = Math.cos(rx), sx = Math.sin(rx);
   const cy = Math.cos(ry), sy = Math.sin(ry);

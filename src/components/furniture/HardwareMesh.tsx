@@ -19,6 +19,8 @@ export function HardwareMesh({ component, pieceId, isSelected, isPieceSelected }
     e.stopPropagation();
     if (e.detail === 2) {
       setSelection(pieceId, component.id);
+    } else if (e.shiftKey) {
+      useStore.getState().togglePieceInSelection(pieceId);
     } else {
       setSelection(pieceId);
     }

@@ -36,6 +36,9 @@ export function PanelMesh({ panel, pieceId, isSelected, isPieceSelected, isFixtu
     if (e.detail === 2) {
       // Double click selects component
       setSelection(pieceId, panel.id);
+    } else if (e.shiftKey) {
+      // Shift+click toggles piece in multi-selection
+      useStore.getState().togglePieceInSelection(pieceId);
     } else {
       setSelection(pieceId);
     }

@@ -29,6 +29,8 @@ export function LegMesh({ leg, pieceId, isSelected, isPieceSelected, isFixture, 
     e.stopPropagation();
     if (e.detail === 2) {
       setSelection(pieceId, leg.id);
+    } else if (e.shiftKey) {
+      useStore.getState().togglePieceInSelection(pieceId);
     } else {
       setSelection(pieceId);
     }

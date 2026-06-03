@@ -5,6 +5,7 @@ import { RoomSettings } from './components/ui/RoomSettings';
 import { AddFurniture } from './components/ui/AddFurniture';
 import { PieceList } from './components/ui/PieceList';
 import { PieceEditor } from './components/ui/PieceEditor';
+import { AlignmentPanel } from './components/ui/AlignmentPanel';
 import { ProjectActions } from './components/ui/ProjectActions';
 import { CutListView } from './components/cutlist/CutListView';
 import { ShareImportDialog } from './components/ui/ShareDialog';
@@ -18,11 +19,12 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'add' | 'edit'>('add');
   const selectedPieceId = useStore((s) => s.selectedPieceId);
+  const selectedPieceIds = useStore((s) => s.selectedPieceIds);
 
   // Switch to edit tab when something is selected
   useEffect(() => {
-    if (selectedPieceId) setSidebarTab('edit');
-  }, [selectedPieceId]);
+    if (selectedPieceId || selectedPieceIds.length > 0) setSidebarTab('edit');
+  }, [selectedPieceId, selectedPieceIds.length]);
 
   // Apply theme class to body and persist to localStorage
   const darkTheme = useStore((s) => s.darkTheme);
@@ -53,7 +55,12 @@ export default function App() {
         if (e.key === 'd') {
           e.preventDefault();
           const s = useStore.getState();
-          if (s.selectedPieceId) s.duplicatePiece(s.selectedPieceId);
+          if (s.selectedPieceIds.length > 0) s.duplicatePieces(s.selectedPieceIds);
+          return;
+        }
+        if (e.key === 'a') {
+          e.preventDefault();
+          useStore.getState().selectAllPieces();
           return;
         }
       }
@@ -61,10 +68,10 @@ export default function App() {
       // Delete/Backspace — only when not in an input
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
         const state = useStore.getState();
-        if (state.selectedComponentId && state.selectedPieceId) {
+        if (state.selectedComponentId && state.selectedPieceId && state.selectedPieceIds.length === 1) {
           state.removeComponent(state.selectedPieceId, state.selectedComponentId);
-        } else if (state.selectedPieceId) {
-          state.removePiece(state.selectedPieceId);
+        } else if (state.selectedPieceIds.length > 0) {
+          state.deletePieces(state.selectedPieceIds);
         }
         return;
       }
@@ -178,6 +185,7 @@ export default function App() {
             {sidebarTab === 'edit' && (
               <>
                 <PieceList />
+                <AlignmentPanel />
                 <PieceEditor />
               </>
             )}
@@ -243,6 +251,7 @@ export default function App() {
               {sidebarTab === 'edit' && (
                 <>
                   <PieceList />
+                  <AlignmentPanel />
                   <PieceEditor />
                 </>
               )}
