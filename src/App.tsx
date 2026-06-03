@@ -39,6 +39,13 @@ export default function App() {
     if (saved === 'light') useStore.getState().toggleTheme();
   }, []);
 
+  // Expose the Zustand store on window for visual tests and ad-hoc
+  // debugging from the devtools console. Cheap (one ref) and
+  // tree-shakeable in production if you don't import the dev build.
+  useEffect(() => {
+    (window as unknown as { __store: typeof useStore }).__store = useStore;
+  }, []);
+
   const toggleShortcuts = useCallback(() => setShowShortcuts((v) => !v), []);
 
   // Keyboard shortcuts

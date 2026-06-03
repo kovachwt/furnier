@@ -750,14 +750,14 @@ export const useStore = create<AppState>()(
         for (const id of ids) {
           const p = s.project.pieces.find((pp) => pp.id === id);
           if (!p || p.locked) continue;
+          // Only rotate the piece itself. Components are children of the
+          // piece's <group> in the scene graph, so the piece rotation
+          // already applies to them — mutating component rotations here
+          // too would double-apply the rotation and visibly warp the piece
+          // at 90°/270° while (coincidentally) leaving it intact at 0°/180°.
           p.rotation[1] += angleRad;
           p.rotation[1] = p.rotation[1] % (2 * Math.PI);
           if (p.rotation[1] < 0) p.rotation[1] += 2 * Math.PI;
-          for (const c of p.components) {
-            c.rotation[1] += angleRad;
-            c.rotation[1] = c.rotation[1] % (2 * Math.PI);
-            if (c.rotation[1] < 0) c.rotation[1] += 2 * Math.PI;
-          }
         }
       }));
       get().pushHistory();
@@ -938,6 +938,7 @@ export const useStore = create<AppState>()(
     loadProject: (json) => {
       try {
         const project = JSON.parse(json) as Project;
+        normalizePieceComponentRotations(project.pieces);
         set({
           project,
           selectedPieceId: null,
@@ -970,6 +971,32 @@ export const useStore = create<AppState>()(
   }))
 );
 
+/**
+ * Repair component Y rotations on pieces saved with the historical
+ * rotatePiecesBy double-rotation bug. The bug added the piece's Y
+ * rotation to every component's Y rotation on each press of R. Because
+ * components are children of the piece's <group>, the piece rotation
+ * already applies to them through the scene graph — so the extra
+ * component rotation was visually doubled (the visible warp at 90°
+ * and 270°). Subtracting the piece's Y rotation from each component's
+ * Y rotation restores the component to its template-defined local
+ * rotation, which is the correct state. No-op for pieces with zero
+ * Y rotation or for projects that were never affected.
+ */
+function normalizePieceComponentRotations(pieces: FurniturePiece[]): void {
+  const TWO_PI = 2 * Math.PI;
+  for (const piece of pieces) {
+    const pieceY = piece.rotation[1] ?? 0;
+    if (pieceY === 0) continue;
+    for (const c of piece.components) {
+      let y = (c.rotation[1] ?? 0) - pieceY;
+      y = y % TWO_PI;
+      if (y < 0) y += TWO_PI;
+      c.rotation[1] = y;
+    }
+  }
+}
+
 // Auto-save to localStorage
 useStore.subscribe(
   (s) => s.project,
@@ -987,6 +1014,7 @@ try {
   if (saved) {
     const project = JSON.parse(saved) as Project;
     if (project.room && project.pieces && project.materials) {
+      normalizePieceComponentRotations(project.pieces);
       useStore.setState({
         project,
         selectedPieceId: null,
