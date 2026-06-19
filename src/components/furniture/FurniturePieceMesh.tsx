@@ -10,6 +10,7 @@ import { PanelMesh } from './PanelMesh';
 import { LegMesh } from './LegMesh';
 import { HardwareMesh } from './HardwareMesh';
 import { snapToGrid, collectSnapTargets, snapPieceToFaces } from '../../utils/snap';
+import { getPieceLocalBounds } from '../../utils/alignment';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface Props {
@@ -136,7 +137,20 @@ export function FurniturePieceMesh({ piece }: Props) {
   // --- Track drag start position + component data for scaling ---
   const dragStartPosRef = useRef<Vec3>([0, 0, 0]);
   const dragStartComponentsRef = useRef<Array<{ id: string; position: Vec3; dims: Record<string, number> }>>([]);
+  // Pivot for piece-level scaling. This MUST match the gizmo's visual
+  // anchor (PivotControls `anchor={[0,0,0]}` = bounding-box center),
+  // otherwise the stored component positions drift relative to what
+  // the user sees during a scale drag, leaving `piece.position`
+  // inconsistent with the actual geometry — so subsequent moves / floor
+  // clamps / snaps would "think the piece is the old size".
   const dragScaleCenterRef = useRef<Vec3>([0, 0, 0]);
+  // Local bounding-box min Y at drag start, used to keep the piece's
+  // *actual* bottom (not piece.position.y) above the floor when moving.
+  // After a resize, piece.position.y is no longer the bottom of the
+  // piece, so the floor clamp must use the real AABB min instead.
+  const dragStartLocalMinYRef = useRef<number>(0);
+  // Per-piece local AABB min Y for multi-piece (group) drags.
+  const groupDragLocalMinYRef = useRef<Map<string, number>>(new Map());
   // For multi-piece drag: starting positions of every selected piece
   const groupDragStartRef = useRef<Map<string, Vec3>>(new Map());
 
@@ -151,23 +165,25 @@ export function FurniturePieceMesh({ piece }: Props) {
         position: [...c.position] as Vec3,
         dims: getScalableDims(c),
       }));
-      const n = currentPiece.components.length;
-      if (n > 0) {
-        dragScaleCenterRef.current = [
-          currentPiece.components.reduce((s, c) => s + c.position[0], 0) / n,
-          currentPiece.components.reduce((s, c) => s + c.position[1], 0) / n,
-          currentPiece.components.reduce((s, c) => s + c.position[2], 0) / n,
-        ] as Vec3;
-      }
+      // Use the bounding-box center (matches the gizmo anchor), NOT the
+      // average of component positions — those differ for asymmetric
+      // pieces and caused the resize drift / stale-position bug.
+      const bounds = getPieceLocalBounds(currentPiece);
+      dragScaleCenterRef.current = [...bounds.center] as Vec3;
+      dragStartLocalMinYRef.current = bounds.min[1];
     }
 
     // Capture starting positions of all selected pieces for group drag
     groupDragStartRef.current.clear();
+    groupDragLocalMinYRef.current.clear();
     if (state.selectedPieceIds.length > 1 && state.selectedPieceIds[0] === piece.id) {
       // We're dragging the primary of a multi-selection
       for (const id of state.selectedPieceIds) {
         const p = state.project.pieces.find(pp => pp.id === id);
-        if (p) groupDragStartRef.current.set(id, [...p.position] as Vec3);
+        if (p) {
+          groupDragStartRef.current.set(id, [...p.position] as Vec3);
+          groupDragLocalMinYRef.current.set(id, getPieceLocalBounds(p).min[1]);
+        }
       }
     }
   }, [piece.id]);
@@ -240,8 +256,12 @@ export function FurniturePieceMesh({ piece }: Props) {
       if (!snappedInfo.z) newPos[2] = snapToGrid(newPos[2], state.gridSize);
     }
 
-    // Clamp Y >= 0 (don't go below floor)
-    newPos[1] = Math.max(0, newPos[1]);
+    // Clamp so the piece's *actual* bottom (piece.position.y + local
+    // AABB min Y) stays >= 0. After a resize, piece.position.y is no
+    // longer the bottom of the piece, so we must offset by the real
+    // local min Y — otherwise the floor constraint uses the old size.
+    const localMinY = dragStartLocalMinYRef.current;
+    newPos[1] = Math.max(-localMinY, newPos[1]);
 
     // --- Group drag: apply the same delta to all selected pieces ---
     const groupStart = groupDragStartRef.current;
@@ -252,9 +272,10 @@ export function FurniturePieceMesh({ piece }: Props) {
       const dz = newPos[2] - startPos[2];
       const positions: Record<string, Vec3> = {};
       for (const [id, s] of groupStart.entries()) {
+        const minY = groupDragLocalMinYRef.current.get(id) ?? 0;
         positions[id] = [
           s[0] + dx,
-          Math.max(0, s[1] + dy),
+          Math.max(-minY, s[1] + dy),
           s[2] + dz,
         ];
       }

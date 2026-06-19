@@ -1,4 +1,5 @@
 import type { FurniturePiece } from '../types';
+import { getPieceLocalBounds } from './alignment';
 
 /**
  * Whether a piece should be checked for floor-gap warnings.
@@ -19,7 +20,13 @@ export function needsFloorCheck(piece: FurniturePiece): boolean {
 export function getFloorGap(piece: FurniturePiece): number | null {
   if (!needsFloorCheck(piece)) return null;
 
-  const gap = piece.position[1]; // floor is at Y=0
+  // Bottom of the piece in world space. Use the real AABB min Y, not
+  // piece.position.y — after a gizmo resize, piece.position.y is no
+  // longer the bottom of the piece, so the old assumption would report
+  // a stale floor gap.
+  const localMinY = getPieceLocalBounds(piece).min[1];
+  const bottomY = piece.position[1] + localMinY;
+  const gap = bottomY; // floor is at Y=0
 
   // Threshold: consider it floating if position Y > 5mm
   // (pieces standing on the floor have position[1] ≈ 0)
