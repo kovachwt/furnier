@@ -43,7 +43,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 ## Panel & Geometry Features
 
-- [ ] **Panel cutouts** — rectangular and circular holes (for cable pass-through, sinks, vents)
+- [x] **Panel cutouts** — rectangular and circular holes (for cable pass-through, sinks, vents) ([docs](docs/doors-and-cutouts.md))
 - [ ] **Rounded corners / fillets** on panels (with warning if not CNC-cuttable)
 - [ ] **Chamfered / beveled edges** rendered in 3D and surfaced in assembly notes
 - [ ] **Dadoes / rabbets / grooves** — joinery representation with auto cut-depth on BOM
@@ -73,7 +73,7 @@ A wish list of features that would be valuable additions to the Furniture Design
 
 ## Hardware & Fittings
 
-- [ ] **Door hinges** — European cup hinges with swing arc visualization
+- [x] **Door hinges** — European cup hinges with swing arc visualization ([docs](docs/doors-and-cutouts.md))
 - [ ] **Drawer-slide library** — full-extension, soft-close, push-to-open variants with specs
 - [x] **Handles / pulls / knobs** — knob & pull hardware component with BOM integration ([docs](docs/handle-component.md))
 - [ ] **Hanging rail / closet rod** — diameter + end-bracket hardware

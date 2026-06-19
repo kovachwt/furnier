@@ -81,6 +81,39 @@ function drawSheetLayout(doc: jsPDF, layout: SheetLayout, materials: Material[])
     doc.setDrawColor(50, 50, 50);
     doc.rect(px, py, pw, ph, 'FD');
 
+    // Cutout outlines on the panel (panel-local coords → sheet space).
+    const cutouts = p.piece.cutouts ?? [];
+    if (cutouts.length > 0) {
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(20, 20, 20);
+      for (const c of cutouts) {
+        if (p.rotated) {
+          // local x → sheet y, local y → sheet x
+          const cx = px + (ph / 2) + c.y * scale;
+          const cy = py + (pw / 2) - c.x * scale;
+          if (c.shape === 'circle') {
+            const r = (c.w / 2) * scale;
+            doc.circle(cx, cy, r, 'FD');
+          } else {
+            const rw = c.h * scale;
+            const rh = c.w * scale;
+            doc.rect(cx - rw / 2, cy - rh / 2, rw, rh, 'FD');
+          }
+        } else {
+          const cx = px + (pw / 2) + c.x * scale;
+          const cy = py + (ph / 2) - c.y * scale;
+          if (c.shape === 'circle') {
+            const r = (c.w / 2) * scale;
+            doc.circle(cx, cy, r, 'FD');
+          } else {
+            const rw = c.w * scale;
+            const rh = c.h * scale;
+            doc.rect(cx - rw / 2, cy - rh / 2, rw, rh, 'FD');
+          }
+        }
+      }
+    }
+
     // Label — only if panel is large enough
     if (pw > 12 && ph > 8) {
       const fontSize = Math.min(7, pw / 5, ph / 3);
@@ -254,6 +287,20 @@ function drawAssembly(doc: jsPDF, pieces: FurniturePiece[], materials: Material[
         doc.setFontSize(7.5);
         doc.setTextColor(130, 130, 150);
         doc.text(`     Edge banding: ${edges.join(', ')}`, MARGIN + 6, y);
+        y += 4;
+        doc.setFontSize(9);
+        doc.setTextColor(50, 50, 70);
+      }
+      // Cutout note
+      if (p.cutouts?.length) {
+        doc.setFontSize(7.5);
+        doc.setTextColor(130, 90, 40);
+        const desc = p.cutouts.map(c =>
+          c.shape === 'circle'
+            ? `⌀${c.w}mm hole at (${c.x},${c.y})`
+            : `${c.w}×${c.h}mm cutout at (${c.x},${c.y})`
+        ).join('; ');
+        doc.text(`     Cutouts: ${desc}`, MARGIN + 6, y);
         y += 4;
         doc.setFontSize(9);
         doc.setTextColor(50, 50, 70);

@@ -1,5 +1,28 @@
 export type Vec3 = [number, number, number];
 
+/**
+ * A hole cut through a panel, for cable pass-through, sinks, vents, etc.
+ *
+ * Coordinates are in the panel's local 2D face space, measured in mm
+ * from the panel's center. The panel's local face is the width × height
+ * plane (the depth axis is the panel thickness); the cutout is punched
+ * straight through the full thickness.
+ */
+export interface Cutout {
+  id: string;
+  shape: 'rect' | 'circle';
+  /** Local X offset from panel center (mm). */
+  x: number;
+  /** Local Y offset from panel center (mm). */
+  y: number;
+  /** Rect: width (mm). Circle: diameter (mm). */
+  w: number;
+  /** Rect: height (mm). Circle: ignored (uses w as diameter). */
+  h: number;
+  /** Optional label surfaced in the cut list / BOM. */
+  label?: string;
+}
+
 export interface Material {
   id: string;
   name: string;
@@ -26,6 +49,8 @@ export interface Panel {
     left: boolean;
     right: boolean;
   };
+  /** Holes punched through the panel (cable/sink/vent cutouts). */
+  cutouts?: Cutout[];
 }
 
 export interface Leg {
@@ -44,6 +69,12 @@ export interface Hinge {
   type: 'hinge';
   name: string;
   hingeType: 'concealed' | 'butt' | 'piano';
+  /** Which way the door swings open, viewed along the hinge axis. */
+  swingDirection: 'left' | 'right';
+  /** Door width (mm) — drives the swing-arc radius. */
+  doorWidth: number;
+  /** Cup depth (mm) — for concealed hinges; informational. */
+  cupDepth?: number;
   position: Vec3;
   rotation: Vec3;
 }
@@ -127,6 +158,8 @@ export interface CutPiece {
   materialId: string;
   edgeBanding: Panel['edgeBanding'];
   rotatable: boolean;
+  /** Holes punched through this panel (for cut-list / PDF annotation). */
+  cutouts?: Cutout[];
 }
 
 export interface SheetLayout {

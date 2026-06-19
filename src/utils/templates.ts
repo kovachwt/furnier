@@ -384,6 +384,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Top Hinge',
       hingeType: 'concealed',
+      swingDirection: 'right',
+      doorWidth: innerW,
+      cupDepth: 12,
       position: [hingeX, height - t - hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });
@@ -392,6 +395,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Bottom Hinge',
       hingeType: 'concealed',
+      swingDirection: 'right',
+      doorWidth: innerW,
+      cupDepth: 12,
       position: [hingeX, t + hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });
@@ -432,6 +438,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Left Top Hinge',
       hingeType: 'concealed',
+      swingDirection: 'right',
+      doorWidth: doorW,
+      cupDepth: 12,
       position: [leftHingeX, height - t - hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });
@@ -440,6 +449,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Left Bottom Hinge',
       hingeType: 'concealed',
+      swingDirection: 'right',
+      doorWidth: doorW,
+      cupDepth: 12,
       position: [leftHingeX, t + hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });
@@ -451,6 +463,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Right Top Hinge',
       hingeType: 'concealed',
+      swingDirection: 'left',
+      doorWidth: doorW,
+      cupDepth: 12,
       position: [rightHingeX, height - t - hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });
@@ -459,6 +474,9 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       type: 'hinge',
       name: 'Right Bottom Hinge',
       hingeType: 'concealed',
+      swingDirection: 'left',
+      doorWidth: doorW,
+      cupDepth: 12,
       position: [rightHingeX, t + hingeInset, hingeZ],
       rotation: [0, 0, 0],
     });

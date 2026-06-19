@@ -13,6 +13,11 @@
 module.exports = {
   name: 'rotate-piece',
   description: 'Add a cabinet and rotate it 90° with the R key',
+  // Rotated geometry produces heavy anti-aliased diagonal edges, so
+  // same-code self-diff run-to-run is ~3–4% from GPU rasterization
+  // variance alone. The default 2% threshold flakes ~half the time;
+  // 4.5% keeps it green while still catching real regressions.
+  maxDiffRatio: 0.045,
   action: async (page, app) => {
     await app.addPiece(page, { template: 'cabinet' });
     await page.waitForTimeout(500);

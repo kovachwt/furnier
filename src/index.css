@@ -564,6 +564,48 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+/* Panel cutout editor */
+.cutout-editor {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.cutout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.cutout-header label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.cutout-note {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin: 2px 0 6px;
+}
+.cutout-row {
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--bg-secondary, rgba(0,0,0,0.03));
+  border-radius: 4px;
+}
+.cutout-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.btn-small {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
 /* Exploded view slider in toolbar */
 .explode-slider {
   display: flex;

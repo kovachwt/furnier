@@ -150,6 +150,12 @@ Both files are ignored by git (see `.gitignore`). On the next pass they are dele
 
 - **`PIXEL_THRESHOLD = 0.15`** — per-pixel color tolerance passed to pixelmatch.
 - **`MAX_DIFF_RATIO = 0.02`** — up to 2% of pixels may differ before the test fails.
+- **`maxDiffRatio`** (per-test override) — a test that is inherently noisy
+  can set `maxDiffRatio: 0.045` (for example) in its `test.cjs` to opt
+  into a looser threshold without loosening the whole suite. Use only
+  when same-code self-diff already exceeds the default (e.g. heavy
+  rotated geometry with many anti-aliased edges — see `rotate-piece`),
+  and keep the value as tight as possible.
 
 WebGL output on headless Chromium is not bit-exact across machines/GPU drivers. If you see flaky failures of ≤0.5% on CI that are unreproducible locally, bump `MAX_DIFF_RATIO` rather than chase ghost pixels.
 

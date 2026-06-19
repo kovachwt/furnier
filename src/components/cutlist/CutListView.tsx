@@ -265,6 +265,10 @@ function SheetDiagram({
           const ph = (p.rotated ? p.piece.width : p.piece.height) * scale;
           const px = p.x * scale;
           const py = p.y * scale;
+          // When a panel is rotated 90° on the sheet, its local X axis
+          // maps to the sheet's Y axis and vice versa. Cutout coords are
+          // in panel-local (x along width, y along height) space.
+          const cutouts = p.piece.cutouts ?? [];
           return (
             <g key={i}>
               <rect
@@ -277,6 +281,38 @@ function SheetDiagram({
                 stroke="#333"
                 strokeWidth={0.5}
               />
+              {cutouts.map((c, ci) => {
+                // Panel-local origin is the panel centre; cutout (x,y) is
+                // an offset from that centre in mm.
+                if (p.rotated) {
+                  // local x → sheet y, local y → sheet x (with sign flip
+                  // to keep the cutout inside the panel rect)
+                  const cx = px + (ph / 2) + c.y * scale;
+                  const cy = py + (pw / 2) - c.x * scale;
+                  if (c.shape === 'circle') {
+                    const r = (c.w / 2) * scale;
+                    return <circle key={ci} cx={cx} cy={cy} r={r}
+                      fill="#fff" fillOpacity={0.85} stroke="#000" strokeWidth={0.4} />;
+                  }
+                  const rw = c.h * scale;
+                  const rh = c.w * scale;
+                  return <rect key={ci} x={cx - rw / 2} y={cy - rh / 2}
+                    width={rw} height={rh}
+                    fill="#fff" fillOpacity={0.85} stroke="#000" strokeWidth={0.4} />;
+                }
+                const cx = px + (pw / 2) + c.x * scale;
+                const cy = py + (ph / 2) - c.y * scale;
+                if (c.shape === 'circle') {
+                  const r = (c.w / 2) * scale;
+                  return <circle key={ci} cx={cx} cy={cy} r={r}
+                    fill="#fff" fillOpacity={0.85} stroke="#000" strokeWidth={0.4} />;
+                }
+                const rw = c.w * scale;
+                const rh = c.h * scale;
+                return <rect key={ci} x={cx - rw / 2} y={cy - rh / 2}
+                  width={rw} height={rh}
+                  fill="#fff" fillOpacity={0.85} stroke="#000" strokeWidth={0.4} />;
+              })}
               <text
                 x={px + pw / 2}
                 y={py + ph / 2 - 6}

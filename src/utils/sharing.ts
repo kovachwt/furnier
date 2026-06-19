@@ -53,7 +53,7 @@ export function compressProject(project: Project): string {
   );
 
   const shareData = {
-    v: 1, // version for future compatibility
+    v: 2, // v2: panel cutouts + hinge swing fields (backward-compatible)
     name: project.name,
     room: project.room,
     pieces: project.pieces,

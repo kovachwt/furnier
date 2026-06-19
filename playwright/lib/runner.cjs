@@ -82,6 +82,11 @@ async function loadTest(folder) {
     description: mod.description || '',
     tier: mod.tier || 'core',
     viewport: mod.viewport || { width: 1280, height: 900 },
+    // Optional per-test override of the 2% diff threshold. Use only for
+    // tests that are inherently noisy (e.g. heavy rotated geometry with
+    // lots of anti-aliased edges) where same-code self-diff already
+    // exceeds the default. Keep it as tight as possible.
+    maxDiffRatio: mod.maxDiffRatio ?? null,
     action: mod.action,
     folder,
   };
@@ -152,7 +157,8 @@ async function runTest(folder, { url, browser, update = false, verbose = false }
   // baseline itself was recorded while the app was broken. Run both.
   const baselineInvariants = validateBaseline(baselineFile);
   const result = comparePngs(baselineFile, actualFile, diffFile);
-  const pixelPassed = !result.reason && result.ratio <= MAX_DIFF_RATIO;
+  const threshold = test.maxDiffRatio ?? MAX_DIFF_RATIO;
+  const pixelPassed = !result.reason && result.ratio <= threshold;
   const passed = pixelPassed && baselineInvariants.ok;
 
   if (passed) {

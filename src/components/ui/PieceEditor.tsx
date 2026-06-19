@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { v4 as uuid } from 'uuid';
 import { useStore } from '../../store/useStore';
 import type {
-  Component, Panel, Leg, Vec3, FurniturePiece, Handle,
+  Component, Panel, Leg, Vec3, FurniturePiece, Handle, Hinge, Cutout,
   CabinetParams, BookshelfParams, DeskParams, DresserParams, DoorCabinetParams,
   FixtureBoxParams, FixtureCylinderParams,
 } from '../../types';
@@ -109,6 +110,21 @@ export function PieceEditor() {
     if (id) setSelection(piece.id, id);
   };
 
+  const handleAddHinge = () => {
+    const hinge: Omit<Hinge, 'id'> = {
+      type: 'hinge',
+      name: 'New Hinge',
+      hingeType: 'concealed',
+      swingDirection: 'right',
+      doorWidth: 400,
+      cupDepth: 12,
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+    };
+    const id = addComponent(piece.id, hinge);
+    if (id) setSelection(piece.id, id);
+  };
+
   return (
     <div className="panel-section">
       <h3>{piece.isFixture ? '📌 ' : ''}Selected: {piece.name}</h3>
@@ -175,6 +191,7 @@ export function PieceEditor() {
           <button className="btn-secondary" onClick={handleAddPanel}>+ Panel</button>
           <button className="btn-secondary" onClick={handleAddLeg}>+ Leg</button>
           <button className="btn-secondary" onClick={handleAddHandle}>+ Handle</button>
+          <button className="btn-secondary" onClick={handleAddHinge}>+ Hinge</button>
         </div>
       )}
 
@@ -598,6 +615,7 @@ function ComponentEditor({
                   ))}
                 </div>
               </div>
+              <CutoutEditor panel={component} update={update} pushHistory={pushHistory} />
             </>
           )}
         </>
@@ -650,6 +668,38 @@ function ComponentEditor({
         </>
       )}
 
+      {component.type === 'hinge' && (
+        <>
+          <div className="form-row">
+            <label>Type</label>
+            <select value={component.hingeType}
+              onChange={(e) => { update({ hingeType: e.target.value } as Partial<Component>); pushHistory(); }}>
+              <option value="concealed">Concealed (cup)</option>
+              <option value="butt">Butt</option>
+              <option value="piano">Piano (continuous)</option>
+            </select>
+          </div>
+          <div className="form-row">
+            <label>Swing</label>
+            <select value={component.swingDirection ?? 'right'}
+              onChange={(e) => { update({ swingDirection: e.target.value } as Partial<Component>); pushHistory(); }}>
+              <option value="right">Opens right</option>
+              <option value="left">Opens left</option>
+            </select>
+          </div>
+          <div className="form-row">
+            <label>Door Width (mm)</label>
+            <input type="number" value={component.doorWidth ?? 400} step={10} min={50}
+              onChange={(e) => { update({ doorWidth: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
+          </div>
+          <div className="form-row">
+            <label>Cup Depth (mm)</label>
+            <input type="number" value={component.cupDepth ?? 12} step={1} min={0}
+              onChange={(e) => { update({ cupDepth: Number(e.target.value) } as Partial<Component>); pushHistory(); }} />
+          </div>
+        </>
+      )}
+
       <button
         className="btn-danger"
         style={{ marginTop: 8 }}
@@ -657,6 +707,106 @@ function ComponentEditor({
       >
         ✕ Remove Component
       </button>
+    </div>
+  );
+}
+
+/**
+ * Sub-editor for panel cutouts (rect / circle holes punched through the
+ * panel). Coordinates are panel-local mm from the panel centre.
+ */
+function CutoutEditor({
+  panel,
+  update,
+  pushHistory,
+}: {
+  panel: Panel;
+  update: (u: Partial<Component>) => void;
+  pushHistory: () => void;
+}) {
+  const cutouts: Cutout[] = panel.cutouts ?? [];
+
+  const setCutouts = (next: Cutout[]) => {
+    update({ cutouts: next.length ? next : undefined } as Partial<Component>);
+    pushHistory();
+  };
+
+  const addCutout = (shape: 'rect' | 'circle') => {
+    const c: Cutout = {
+      id: uuid(),
+      shape,
+      x: 0,
+      y: 0,
+      w: shape === 'circle' ? 60 : 80,
+      h: shape === 'circle' ? 0 : 80,
+      label: '',
+    };
+    setCutouts([...cutouts, c]);
+  };
+
+  const updateCutout = (id: string, patch: Partial<Cutout>) => {
+    setCutouts(cutouts.map(c => c.id === id ? { ...c, ...patch } : c));
+  };
+
+  const removeCutout = (id: string) => {
+    setCutouts(cutouts.filter(c => c.id !== id));
+  };
+
+  return (
+    <div className="cutout-editor">
+      <div className="cutout-header">
+        <label>Cutouts ({cutouts.length})</label>
+        <div className="btn-row">
+          <button className="btn-secondary" type="button" onClick={() => addCutout('rect')}>+ Rect</button>
+          <button className="btn-secondary" type="button" onClick={() => addCutout('circle')}>+ Circle</button>
+        </div>
+      </div>
+      <div className="cutout-note">
+        Coords are mm from panel centre (width × height plane).
+      </div>
+      {cutouts.map((c, i) => (
+        <div key={c.id} className="cutout-row">
+          <div className="cutout-row-head">
+            <span>{i + 1}. {c.shape}</span>
+            <button className="btn-danger btn-small" type="button" onClick={() => removeCutout(c.id)}>✕</button>
+          </div>
+          <div className="form-row">
+            <label>X</label>
+            <input type="number" value={c.x} step={5}
+              onChange={(e) => updateCutout(c.id, { x: Number(e.target.value) })} />
+          </div>
+          <div className="form-row">
+            <label>Y</label>
+            <input type="number" value={c.y} step={5}
+              onChange={(e) => updateCutout(c.id, { y: Number(e.target.value) })} />
+          </div>
+          {c.shape === 'rect' ? (
+            <>
+              <div className="form-row">
+                <label>Width</label>
+                <input type="number" value={c.w} step={5} min={1}
+                  onChange={(e) => updateCutout(c.id, { w: Number(e.target.value) })} />
+              </div>
+              <div className="form-row">
+                <label>Height</label>
+                <input type="number" value={c.h} step={5} min={1}
+                  onChange={(e) => updateCutout(c.id, { h: Number(e.target.value) })} />
+              </div>
+            </>
+          ) : (
+            <div className="form-row">
+              <label>Diameter</label>
+              <input type="number" value={c.w} step={5} min={1}
+                onChange={(e) => updateCutout(c.id, { w: Number(e.target.value) })} />
+            </div>
+          )}
+          <div className="form-row">
+            <label>Label</label>
+            <input type="text" value={c.label ?? ''}
+              onChange={(e) => updateCutout(c.id, { label: e.target.value })} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

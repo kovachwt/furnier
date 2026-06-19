@@ -71,6 +71,7 @@ export function extractCutPieces(pieces: FurniturePiece[]): CutPiece[] {
           materialId: panel.materialId,
           edgeBanding: { ...panel.edgeBanding },
           rotatable: true,
+          cutouts: panel.cutouts?.length ? panel.cutouts.map(c => ({ ...c })) : undefined,
         });
       }
     }
@@ -267,6 +268,7 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
   const entries: BOMEntry[] = [];
   const panelMap = new Map<string, { count: number; dims: string[] }>();
   const hardwareMap = new Map<string, number>();
+  const cutoutMap = new Map<string, { quantity: number; spec: string }>();
 
   for (const piece of pieces) {
     if (piece.isFixture) continue; // Skip fixtures
@@ -277,6 +279,16 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
         entry.count++;
         entry.dims.push(`${comp.width}×${comp.height}mm`);
         panelMap.set(key, entry);
+
+        if (comp.cutouts?.length) {
+          for (const c of comp.cutouts) {
+            const dim = c.shape === 'circle' ? `⌀${c.w}mm` : `${c.w}×${c.h}mm`;
+            const key2 = `${c.shape} ${dim}${c.label ? ' — ' + c.label : ''}`;
+            const existing = cutoutMap.get(key2) ?? { quantity: 0, spec: c.shape };
+            existing.quantity += 1;
+            cutoutMap.set(key2, existing);
+          }
+        }
       } else if (comp.type === 'leg') {
         const key = `${comp.style} leg ${comp.diameter}mm ø × ${comp.height}mm`;
         hardwareMap.set(key, (hardwareMap.get(key) ?? 0) + 1);
@@ -313,6 +325,16 @@ export function generateBOM(pieces: FurniturePiece[], materials: Material[]): BO
       name,
       specification: '',
       quantity: qty,
+    });
+  }
+
+  // Cutout entries (aggregated by shape + size + label)
+  for (const [name, data] of cutoutMap) {
+    entries.push({
+      category: 'Cutouts',
+      name,
+      specification: data.spec,
+      quantity: data.quantity,
     });
   }
 
@@ -471,7 +493,7 @@ export function generateCutListCSV(
 
   // ── Sheet 1: Panels ──
   lines.push('Panel Cut List');
-  lines.push(csvRow('Piece Name', 'Panel Name', 'Width (mm)', 'Height (mm)', 'Depth (mm)', 'Material', 'Edge Banding (T/B/L/R)', 'Rotatable'));
+  lines.push(csvRow('Piece Name', 'Panel Name', 'Width (mm)', 'Height (mm)', 'Depth (mm)', 'Material', 'Edge Banding (T/B/L/R)', 'Rotatable', 'Cutouts'));
 
   for (const piece of pieces) {
     if (piece.isFixture) continue;
@@ -481,11 +503,18 @@ export function generateCutListCSV(
       const mat = materials.find(m => m.id === panel.materialId);
       const eb = [panel.edgeBanding.top, panel.edgeBanding.bottom, panel.edgeBanding.left, panel.edgeBanding.right]
         .map(e => e ? 'Y' : 'N').join('');
+      const cutoutDesc = panel.cutouts?.length
+        ? panel.cutouts.map(c =>
+            c.shape === 'circle'
+              ? `circle ⌀${c.w}@(${c.x},${c.y})`
+              : `rect ${c.w}x${c.h}@(${c.x},${c.y})`
+          ).join('; ')
+        : '';
       lines.push(csvRow(
         piece.name, panel.name,
         panel.width, panel.height, panel.depth,
         mat?.name ?? panel.materialId,
-        eb, 'Yes'
+        eb, 'Yes', cutoutDesc
       ));
     }
   }
