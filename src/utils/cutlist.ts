@@ -29,9 +29,11 @@ export function findSheetOverflow(pieces: FurniturePiece[], materials: Material[
       const mat = materials.find(m => m.id === panel.materialId);
       if (!mat) continue;
 
-      const { sheetWidth, sheetHeight } = mat;
+      const { sheetWidth, sheetHeight, grainDirection } = mat;
       const fitsNormal = panel.width <= sheetWidth && panel.height <= sheetHeight;
-      const fitsRotated = panel.width <= sheetHeight && panel.height <= sheetWidth;
+      // Rotation on the sheet is only possible when the material's grain is not
+      // locked — a grain-locked sheet only accepts the panel in normal orientation.
+      const fitsRotated = !grainDirection && panel.width <= sheetHeight && panel.height <= sheetWidth;
 
       if (!fitsNormal && !fitsRotated) {
         overflows.push({
@@ -97,9 +99,23 @@ function guillotinePack(
   sheetH: number,
   kerf: number,
   grainLocked: boolean
-): SheetLayout[] {
+): { layouts: SheetLayout[]; unplaced: CutPiece[] } {
   const layouts: SheetLayout[] = [];
-  const remaining = [...pieces];
+
+  // Pieces that cannot fit an empty sheet in any allowed orientation can never
+  // be placed. Separate them up front so they are reported instead of silently
+  // dropped from the cut list.
+  const unplaced: CutPiece[] = [];
+  const remaining: CutPiece[] = [];
+  for (const piece of pieces) {
+    const fitsNormal = piece.width <= sheetW && piece.height <= sheetH;
+    const fitsRotated = !grainLocked && piece.rotatable && piece.height <= sheetW && piece.width <= sheetH;
+    if (fitsNormal || fitsRotated) {
+      remaining.push(piece);
+    } else {
+      unplaced.push(piece);
+    }
+  }
 
   // Sort by area descending
   remaining.sort((a, b) => (b.width * b.height) - (a.width * a.height));
@@ -187,8 +203,9 @@ function guillotinePack(
     }
 
     if (placements.length === 0) {
-      // Some pieces don't fit any sheet — break to avoid infinite loop
-      console.warn('Could not place pieces:', remaining);
+      // Safety net: every remaining piece fits an empty sheet, so this should be
+      // unreachable — but never drop pieces silently.
+      unplaced.push(...remaining);
       break;
     }
 
@@ -205,7 +222,7 @@ function guillotinePack(
     });
   }
 
-  return layouts;
+  return { layouts, unplaced };
 }
 
 /**
@@ -236,7 +253,7 @@ export function generateCutList(
       continue;
     }
 
-    const layouts = guillotinePack(
+    const { layouts, unplaced } = guillotinePack(
       matPieces,
       mat.sheetWidth,
       mat.sheetHeight,
@@ -249,6 +266,10 @@ export function generateCutList(
       layout.sheetIndex = allLayouts.length;
       allLayouts.push(layout);
     }
+
+    // Surface packer leftovers (e.g. panels blocked by grain lock) so they
+    // never vanish from the cut list / CSV / UI warnings.
+    unplaceable.push(...unplaced);
   }
 
   return { layouts: allLayouts, unplaceable };
