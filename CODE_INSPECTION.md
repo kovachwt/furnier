@@ -32,7 +32,9 @@ Repro (verified by execution): a grain-locked material (2500×1250 sheet) with a
 
 Single-piece drags do it correctly (`updatePiece` during drag + one `pushHistory` in `handleDragEnd`). Needs a non-history-pushing variant for the drag loop.
 
-### 3. Cutout holes drawn at the wrong position on rotated panels
+### 3. Cutout holes drawn at the wrong position on rotated panels — ✅ FIXED
+
+> **Status update:** Both renderers (`CutListView.tsx` SVG + `pdfExport.ts` PDF) now use the placed-rect center terms in the rotated branch (`cx = px + pw/2 + c.y·s`, `cy = py + ph/2 − c.x·s` — `pw`/`ph` are the already-swapped placed dims, so the center is the same expression as the unrotated branch). Covered by a regression check appended to the existing `panel-cutouts` Playwright test: it forces a rotated placement (2000×700 panel on the 2800×2070 sheet), reads the drawn SVG geometry, and asserts each cutout center matches the rotated transform (verified to fail on the old code: off by ~169 SVG units). Original finding below for reference.
 
 **`src/components/cutlist/CutListView.tsx:290-292`** (SVG) and **`src/utils/pdfExport.tsx:92`** (PDF) — same copy-pasted bug.
 
@@ -114,7 +116,7 @@ Inconsistently, name edits, edge-banding toggles, and constraint add/remove neve
 
 1. ✅ Done — `guillotinePack` returning unplaceables + `findSheetOverflow` grain check (#1, commit `7682da4`).
 2. ✅ Done — group-drag history flooding (#2): `setPiecesPositions(pos, { skipHistory: true })` in the drag loop; single `pushHistory` from `handleDragEnd`.
-3. The `pw/ph` swap in both cutout renderers (#3) — two-line fix, verified math above.
+3. ✅ Done — the `pw/ph` swap in both cutout renderers (#3): placed-rect center terms corrected in SVG + PDF; assertion-only regression check added to `panel-cutouts` (no baseline change).
 4. Unify piece-rotation handling by reusing `computePieceAABB`-style transforms in `snap.ts` / `alignment.ts` (#4).
 5. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".
 

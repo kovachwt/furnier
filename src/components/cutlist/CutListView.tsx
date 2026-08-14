@@ -286,9 +286,11 @@ function SheetDiagram({
                 // an offset from that centre in mm.
                 if (p.rotated) {
                   // local x → sheet y, local y → sheet x (with sign flip
-                  // to keep the cutout inside the panel rect)
-                  const cx = px + (ph / 2) + c.y * scale;
-                  const cy = py + (pw / 2) - c.x * scale;
+                  // to keep the cutout inside the panel rect). pw/ph are
+                  // the PLACED rect dims (already swapped), so the panel
+                  // centre is (px + pw/2, py + ph/2) — same as unrotated.
+                  const cx = px + (pw / 2) + c.y * scale;
+                  const cy = py + (ph / 2) - c.x * scale;
                   if (c.shape === 'circle') {
                     const r = (c.w / 2) * scale;
                     return <circle key={ci} cx={cx} cy={cy} r={r}

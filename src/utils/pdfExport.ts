@@ -88,9 +88,11 @@ function drawSheetLayout(doc: jsPDF, layout: SheetLayout, materials: Material[])
       doc.setDrawColor(20, 20, 20);
       for (const c of cutouts) {
         if (p.rotated) {
-          // local x → sheet y, local y → sheet x
-          const cx = px + (ph / 2) + c.y * scale;
-          const cy = py + (pw / 2) - c.x * scale;
+          // local x → sheet y, local y → sheet x. pw/ph are the PLACED
+          // rect dims (already swapped), so the panel centre is
+          // (px + pw/2, py + ph/2) — same as unrotated.
+          const cx = px + (pw / 2) + c.y * scale;
+          const cy = py + (ph / 2) - c.x * scale;
           if (c.shape === 'circle') {
             const r = (c.w / 2) * scale;
             doc.circle(cx, cy, r, 'FD');
