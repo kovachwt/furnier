@@ -56,9 +56,9 @@ node playwright/run.cjs --verbose
 Convenience npm scripts:
 
 ```bash
-npm run test:visual           # all 27 tests
-npm run test:visual:core      # 21 fast tests (~2-3 min) — the daily driver
-npm run test:visual:extended  # 6 slower tests (align, distribute, undo, search, multi-select)
+npm run test:visual           # all tests
+npm run test:visual:core      # 25 fast tests (~2-3 min) — the daily driver
+npm run test:visual:extended  # 7 slower tests (align, distribute, undo, search, multi-select, rotated-align)
 npm run test:visual:update    # regenerate all baselines
 ```
 

@@ -1,4 +1,7 @@
 import type { Vec3, FurniturePiece, Room } from '../types';
+import { computeComponentAABB } from './clashDetection';
+
+type Component = FurniturePiece['components'][number];
 
 export interface SnapTarget {
   axis: 'x' | 'y' | 'z';
@@ -13,23 +16,21 @@ export interface SnapLine {
 }
 
 /**
- * Compute axis-aligned bounding box half-extents after rotation.
- * Uses XYZ Euler order (Three.js default): R = Rz * Ry * Rx
+ * Compute a panel's axis-aligned face values (min/max per axis) in the
+ * given reference frame: the panel box is transformed through its own
+ * rotation, translated by its component position, transformed by the
+ * piece rotation, then translated by `piecePosition`. This is the same
+ * corner-transform `computePieceAABB` uses, so snap targets stay
+ * consistent with clash / alignment / distance AABBs for rotated
+ * pieces.
  */
-export function getAABBHalfExtents(w: number, h: number, d: number, rotation: Vec3): [number, number, number] {
-  const [rx, ry, rz] = rotation;
-  const cx = Math.cos(rx), sx = Math.sin(rx);
-  const cy = Math.cos(ry), sy = Math.sin(ry);
-  const cz = Math.cos(rz), sz = Math.sin(rz);
-
-  const hw = w / 2, hh = h / 2, hd = d / 2;
-
-  // R = Rz * Ry * Rx — half-extent along each world axis is sum of abs contributions
-  const ex = Math.abs(cy * cz) * hw + Math.abs(sx * sy * cz - cx * sz) * hh + Math.abs(cx * sy * cz + sx * sz) * hd;
-  const ey = Math.abs(cy * sz) * hw + Math.abs(sx * sy * sz + cx * cz) * hh + Math.abs(cx * sy * sz - sx * cz) * hd;
-  const ez = Math.abs(sy) * hw + Math.abs(sx * cy) * hh + Math.abs(cx * cy) * hd;
-
-  return [ex, ey, ez];
+function panelFaceValues(
+  panel: Component,
+  pieceRotation: Vec3,
+  piecePosition: Vec3,
+): { min: Vec3; max: Vec3 } {
+  const aabb = computeComponentAABB(panel, pieceRotation, piecePosition);
+  return { min: [aabb.minX, aabb.minY, aabb.minZ], max: [aabb.maxX, aabb.maxY, aabb.maxZ] };
 }
 
 /**
@@ -55,27 +56,21 @@ export function collectSnapTargets(
   targets.push({ axis: 'y', value: 0, label: 'Floor' });
   targets.push({ axis: 'y', value: room.height, label: 'Ceiling' });
 
-  // Panel faces from all pieces — rotation-aware
+  // Panel faces from all pieces — rotation-aware (component AND piece rotation)
   for (const piece of pieces) {
     if (piece.id === excludePieceId) continue;
     for (const comp of piece.components) {
       if (comp.id === excludeComponentId) continue;
       if (comp.type === 'panel') {
         const panel = comp;
-        // World position = piece position + component position
-        const wx = piece.position[0] + panel.position[0];
-        const wy = piece.position[1] + panel.position[1];
-        const wz = piece.position[2] + panel.position[2];
+        const { min, max } = panelFaceValues(panel, piece.rotation, piece.position);
 
-        // Rotation-aware half-extents
-        const [ex, ey, ez] = getAABBHalfExtents(panel.width, panel.height, panel.depth, panel.rotation);
-
-        targets.push({ axis: 'x', value: wx - ex, label: `${panel.name} left` });
-        targets.push({ axis: 'x', value: wx + ex, label: `${panel.name} right` });
-        targets.push({ axis: 'y', value: wy - ey, label: `${panel.name} bottom` });
-        targets.push({ axis: 'y', value: wy + ey, label: `${panel.name} top` });
-        targets.push({ axis: 'z', value: wz - ez, label: `${panel.name} back` });
-        targets.push({ axis: 'z', value: wz + ez, label: `${panel.name} front` });
+        targets.push({ axis: 'x', value: min[0], label: `${panel.name} left` });
+        targets.push({ axis: 'x', value: max[0], label: `${panel.name} right` });
+        targets.push({ axis: 'y', value: min[1], label: `${panel.name} bottom` });
+        targets.push({ axis: 'y', value: max[1], label: `${panel.name} top` });
+        targets.push({ axis: 'z', value: min[2], label: `${panel.name} back` });
+        targets.push({ axis: 'z', value: max[2], label: `${panel.name} front` });
       }
     }
   }
@@ -101,20 +96,26 @@ export function snapPieceToFaces(
   let snapLineY: SnapLine | null = null;
   let snapLineZ: SnapLine | null = null;
 
-  // Collect the piece's own panel face offsets (relative to piece origin)
+  // Collect the dragged piece's own panel face offsets (relative to piece
+  // origin) in the piece-rotated local frame. Because dragging only ever
+  // translates the piece (the gizmo rotation rings are disabled — see
+  // FurniturePieceMesh), piece.rotation is constant during a drag, so
+  // these offsets are constant and `proposedPos + offset` correctly gives
+  // the world face value. computeComponentAABB with piecePosition = origin
+  // yields exactly that piece-local offset.
   interface FaceOffset { axis: 'x' | 'y' | 'z'; offset: number; label: string }
   const pieceFaces: FaceOffset[] = [];
 
   for (const comp of piece.components) {
     if (comp.type !== 'panel') continue;
-    const [ex, ey, ez] = getAABBHalfExtents(comp.width, comp.height, comp.depth, comp.rotation);
+    const { min, max } = panelFaceValues(comp, piece.rotation, [0, 0, 0]);
 
-    pieceFaces.push({ axis: 'x', offset: comp.position[0] - ex, label: `${comp.name} left` });
-    pieceFaces.push({ axis: 'x', offset: comp.position[0] + ex, label: `${comp.name} right` });
-    pieceFaces.push({ axis: 'y', offset: comp.position[1] - ey, label: `${comp.name} bottom` });
-    pieceFaces.push({ axis: 'y', offset: comp.position[1] + ey, label: `${comp.name} top` });
-    pieceFaces.push({ axis: 'z', offset: comp.position[2] - ez, label: `${comp.name} back` });
-    pieceFaces.push({ axis: 'z', offset: comp.position[2] + ez, label: `${comp.name} front` });
+    pieceFaces.push({ axis: 'x', offset: min[0], label: `${comp.name} left` });
+    pieceFaces.push({ axis: 'x', offset: max[0], label: `${comp.name} right` });
+    pieceFaces.push({ axis: 'y', offset: min[1], label: `${comp.name} bottom` });
+    pieceFaces.push({ axis: 'y', offset: max[1], label: `${comp.name} top` });
+    pieceFaces.push({ axis: 'z', offset: min[2], label: `${comp.name} back` });
+    pieceFaces.push({ axis: 'z', offset: max[2], label: `${comp.name} front` });
   }
 
   let bestX = threshold + 1;

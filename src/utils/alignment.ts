@@ -1,13 +1,21 @@
 // Alignment / distribution helpers for multi-piece operations.
 //
-// All bounds are computed in world coordinates (mm) and account for
-// component rotation via getAABBHalfExtents. Non-panel components
-// (legs, hardware) are treated as small ~10 mm extents centered on
-// their position — they're decoration, not the bounding volume of
-// the piece in practice.
+// *World* bounds are computed with the piece-rotation-aware
+// `computePieceAABB` from clashDetection.ts (transforms every
+// component's 8 corners through component-rotate → comp-translate →
+// piece-rotate → piece-translate). This is the same math the clash
+// detector, distance labels, and snap targets use, so Align /
+// Distribute / Align-to-wall and the multi-select bounds box agree
+// for rotated pieces.
+//
+// `getPieceLocalBounds` returns the AABB in the piece's *component*
+// coordinate space (the frame `component.position` lives in, before
+// the piece's own rotation/translation is applied). It is therefore
+// intentionally piece-rotation-agnostic — callers like the gizmo
+// scaling-center and floor-clamp offsets operate in that same frame.
 
 import type { Vec3, FurniturePiece, Room } from '../types';
-import { getAABBHalfExtents } from './snap';
+import { computeComponentAABB, computePieceAABB } from './clashDetection';
 
 export interface AABB {
   min: Vec3;
@@ -58,39 +66,53 @@ const INFINITE: AABB = {
   size: [0, 0, 0],
 };
 
-/** AABB in piece-local coordinates (mm), origin at piece position. */
+/**
+ * AABB in the piece's *component* coordinate space (mm) — the frame
+ * `component.position` lives in, before the piece's own rotation /
+ * translation is applied. Piece rotation is intentionally NOT applied
+ * here: the gizmo scaling center and floor-clamp offsets operate in
+ * this same component frame. (For yaw-only pieces — the only rotation
+ * the UI exposes — the Y extents are identical to the rotated frame
+ * anyway, so floor logic is unaffected.)
+ */
 export function getPieceLocalBounds(piece: FurniturePiece): AABB {
   if (piece.components.length === 0) return { ...EMPTY_AABB };
 
   let bounds = INFINITE;
   for (const comp of piece.components) {
-    if (comp.type === 'panel') {
-      const extents = getAABBHalfExtents(comp.width, comp.height, comp.depth, comp.rotation);
-      bounds = extendBounds(bounds, comp.position, extents);
-    } else if (comp.type === 'leg') {
-      // Leg is a vertical cylinder — half-height along Y, radius in XZ
-      const r = comp.diameter / 2;
-      bounds = extendBounds(bounds, comp.position, [r, comp.height / 2, r]);
-    } else {
-      // Hardware: 10mm isotropic extent centered on position
-      const e = 5;
-      bounds = extendBounds(bounds, comp.position, [e, e, e]);
-    }
+    // pieceRotation = [0,0,0] → component-rotation only, in the
+    // component coordinate space (no piece transform applied).
+    const a = computeComponentAABB(comp, [0, 0, 0], [0, 0, 0]);
+    const center: Vec3 = [
+      (a.minX + a.maxX) / 2,
+      (a.minY + a.maxY) / 2,
+      (a.minZ + a.maxZ) / 2,
+    ];
+    const half: [number, number, number] = [
+      (a.maxX - a.minX) / 2,
+      (a.maxY - a.minY) / 2,
+      (a.maxZ - a.minZ) / 2,
+    ];
+    bounds = extendBounds(bounds, center, half);
   }
   return bounds;
 }
 
-/** AABB in world coordinates (mm). */
+/** AABB in world coordinates (mm), piece-rotation-aware. */
 export function getPieceWorldBounds(piece: FurniturePiece): AABB {
-  const local = getPieceLocalBounds(piece);
-  const px = piece.position[0];
-  const py = piece.position[1];
-  const pz = piece.position[2];
+  if (piece.components.length === 0) return { ...EMPTY_AABB };
+  const a = computePieceAABB(piece);
+  const min: Vec3 = [a.minX, a.minY, a.minZ];
+  const max: Vec3 = [a.maxX, a.maxY, a.maxZ];
   return {
-    min: [local.min[0] + px, local.min[1] + py, local.min[2] + pz],
-    max: [local.max[0] + px, local.max[1] + py, local.max[2] + pz],
-    center: [local.center[0] + px, local.center[1] + py, local.center[2] + pz],
-    size: local.size,
+    min,
+    max,
+    center: [
+      (a.minX + a.maxX) / 2,
+      (a.minY + a.maxY) / 2,
+      (a.minZ + a.maxZ) / 2,
+    ],
+    size: [a.maxX - a.minX, a.maxY - a.minY, a.maxZ - a.minZ],
   };
 }
 

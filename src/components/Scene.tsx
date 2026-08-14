@@ -9,18 +9,20 @@ import { KeyboardCameraControls } from './KeyboardCameraControls';
 import { CameraAnimator } from './CameraAnimator';
 import { ViewportCapture } from './ViewportCapture';
 import { ClashVisualization } from './ClashVisualization';
-import type { Vec3 } from '../types';
+import type { FurniturePiece } from '../types';
 import { getPiecesWorldBounds } from '../utils/alignment';
+import { computePieceAABB } from '../utils/clashDetection';
 
-/** Compute the center X/Z of a piece's components in mm (local to piece origin). */
-function getPieceLocalCenter(piece: { components: Array<{ position: Vec3; type: string }> }): { cx: number; cz: number } {
-  let cx = 0, cz = 0, n = 0;
-  for (const comp of piece.components) {
-    cx += comp.position[0];
-    cz += comp.position[2];
-    n++;
-  }
-  return n > 0 ? { cx: cx / n, cz: cz / n } : { cx: 0, cz: 0 };
+/**
+ * World-space center X/Z of a piece (mm), rotation-aware via
+ * `computePieceAABB`. Used by SmartGuides for center-alignment lines —
+ * previously this averaged component positions and ignored the
+ * piece's yaw rotation, so a rotated asymmetric piece drew its guide
+ * through the wrong point.
+ */
+function getPieceWorldCenterXZ(piece: FurniturePiece): { cx: number; cz: number } {
+  const a = computePieceAABB(piece);
+  return { cx: (a.minX + a.maxX) / 2, cz: (a.minZ + a.maxZ) / 2 };
 }
 
 /**
@@ -116,9 +118,9 @@ function SmartGuides() {
   const selectedPiece = pieces.find(p => p.id === selectedPieceId);
   if (!selectedPiece) return null;
 
-  const { cx, cz } = getPieceLocalCenter(selectedPiece);
-  const worldCx = mmToWorld(cx + selectedPiece.position[0]);
-  const worldCz = mmToWorld(cz + selectedPiece.position[2]);
+  const { cx, cz } = getPieceWorldCenterXZ(selectedPiece);
+  const worldCx = mmToWorld(cx);
+  const worldCz = mmToWorld(cz);
 
   // Find neighbors whose center aligns with selected piece's center (within 10mm)
   const alignThreshold = 10;
@@ -126,11 +128,9 @@ function SmartGuides() {
 
   for (const other of pieces) {
     if (other.id === selectedPieceId || other.isFixture) continue;
-    const { cx: ocx, cz: ocz } = getPieceLocalCenter(other);
-    const nwx = ocx + other.position[0];
-    const nwz = ocz + other.position[2];
-    const dx = Math.abs(nwx - (cx + selectedPiece.position[0]));
-    const dz = Math.abs(nwz - (cz + selectedPiece.position[2]));
+    const { cx: ocx, cz: ocz } = getPieceWorldCenterXZ(other);
+    const dx = Math.abs(ocx - cx);
+    const dz = Math.abs(ocz - cz);
     if (dx < alignThreshold || dz < alignThreshold) {
       alignedNeighbors.push(other.id);
     }
@@ -174,9 +174,9 @@ function SmartGuides() {
       {alignedNeighbors.map((neighborId) => {
         const neighbor = pieces.find(p => p.id === neighborId);
         if (!neighbor) return null;
-        const { cx: ncx, cz: ncz } = getPieceLocalCenter(neighbor);
-        const nwx = ncx + neighbor.position[0];
-        const nwz = ncz + neighbor.position[2];
+        const { cx: ncx, cz: ncz } = getPieceWorldCenterXZ(neighbor);
+        const nwx = ncx;
+        const nwz = ncz;
         return (
           <group key={neighborId}>
             {/* Vertical line through neighbor center */}

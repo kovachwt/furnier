@@ -47,7 +47,9 @@ const cy = py + (pw / 2) - c.x * scale;  // should be ph / 2
 
 Verified math: an 800×400 panel placed rotated gets a centered cutout drawn at sheet (400, 200) instead of (200, 400). Any non-square rotated panel shows its cutouts misplaced in both the sheet diagram and the PDF.
 
-### 4. Piece rotation ignored by snap and align — inconsistent with the rest of the codebase
+### 4. Piece rotation ignored by snap and align — inconsistent with the rest of the codebase — ✅ FIXED
+
+> **Status update:** Unified all piece-rotation math on the canonical corner-transform in `clashDetection.ts`. Extracted `computeComponentAABB(comp, pieceRotation, piecePosition)` (transforms each of a component's 8 corners through comp-rotate → comp-translate → piece-rotate → piece-translate, then takes axis-aligned bounds); `computePieceAABB` now aggregates it. `alignment.ts` `getPieceWorldBounds` / `getPiecesWorldBounds` / `computeAlignedPositions` / `computeDistributedPositions` now use `computePieceAABB`, so Align / Distribute / Align-to-wall and `MultiSelectBounds` are correct for rotated pieces. `snap.ts` `collectSnapTargets` and `snapPieceToFaces` compute panel face values via `computeComponentAABB` (with the dragged piece's offsets taken in the piece-rotated local frame, which is valid because the gizmo's rotation rings are disabled so piece rotation is constant during a drag). `SmartGuides` in `Scene.tsx` now uses the rotation-aware AABB center too. `getPieceLocalBounds` deliberately stays piece-rotation-agnostic (it operates in the component-coordinate space that `component.position` and the gizmo scaling center / floor-clamp offsets live in). Covered by the extended Playwright regression test `rotated-align`, which adds two differently-footprinted cabinets, rotates both 90°, asserts the rotation-aware world AABB swaps width↔depth extents, aligns their right edges, and asserts the real (rotation-aware) `maxX` values match (verified to fail on the old rotation-naive bounds: Δ~200 mm). Original finding below for reference.
 
 **`src/utils/snap.ts`** (`collectSnapTargets`, `snapPieceToFaces`) and **`src/utils/alignment.ts`** (`getPieceWorldBounds` et al.)
 
@@ -117,7 +119,7 @@ Inconsistently, name edits, edge-banding toggles, and constraint add/remove neve
 1. ✅ Done — `guillotinePack` returning unplaceables + `findSheetOverflow` grain check (#1, commit `7682da4`).
 2. ✅ Done — group-drag history flooding (#2): `setPiecesPositions(pos, { skipHistory: true })` in the drag loop; single `pushHistory` from `handleDragEnd`.
 3. ✅ Done — the `pw/ph` swap in both cutout renderers (#3): placed-rect center terms corrected in SVG + PDF; assertion-only regression check added to `panel-cutouts` (no baseline change).
-4. Unify piece-rotation handling by reusing `computePieceAABB`-style transforms in `snap.ts` / `alignment.ts` (#4).
+4. ✅ Done — unified piece-rotation handling: extracted `computeComponentAABB` in `clashDetection.ts`; `alignment.ts` and `snap.ts` now reuse it / `computePieceAABB`; `SmartGuides` uses rotation-aware AABB center. Covered by extended test `rotated-align` (#4).
 5. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".
 
 Items #1–#3 are small and verifiable, and can be covered with regression checks in the existing Playwright suite. #4 is a proper refactor and belongs in its own commit.

@@ -1,24 +1,9 @@
 import * as THREE from 'three';
-import type { FurniturePiece } from '../types';
+import type { Vec3, FurniturePiece } from '../types';
 
-/** Axis-aligned bounding box in mm (world space). */
-export interface AABB {
-  minX: number;
-  minY: number;
-  minZ: number;
-  maxX: number;
-  maxY: number;
-  maxZ: number;
-}
-
-/** A pair of piece IDs that are in clash. */
-export interface ClashPair {
-  pieceA: string;
-  pieceB: string;
-}
-
-/** Half-extents of a component in its own local (unrotated) space. */
-function componentHalfExtents(comp: FurniturePiece['components'][number]): [number, number, number] {
+/** Component types that contribute to a piece's bounding volume.
+ * Kept in sync with `getPieceLocalBounds` in alignment.ts. */
+export function componentHalfExtents(comp: FurniturePiece['components'][number]): [number, number, number] {
   switch (comp.type) {
     case 'panel':
       return [comp.width! / 2, comp.height! / 2, comp.depth! / 2];
@@ -39,60 +24,100 @@ function componentHalfExtents(comp: FurniturePiece['components'][number]): [numb
   }
 }
 
+/** Local-space 8 corners of a component's (unrotated) box. */
+function componentLocalCorners(hx: number, hy: number, hz: number): [number, number, number][] {
+  return [
+    [-hx, -hy, -hz], [ hx, -hy, -hz],
+    [-hx,  hy, -hz], [ hx,  hy, -hz],
+    [-hx, -hy,  hz], [ hx, -hy,  hz],
+    [-hx,  hy,  hz], [ hx,  hy,  hz],
+  ];
+}
+
+/** Axis-aligned bounding box in mm (world space). */
+export interface AABB {
+  minX: number;
+  minY: number;
+  minZ: number;
+  maxX: number;
+  maxY: number;
+  maxZ: number;
+}
+
+/** A pair of piece IDs that are in clash. */
+export interface ClashPair {
+  pieceA: string;
+  pieceB: string;
+}
+
 /**
- * Compute the world-space AABB of a piece, accounting for:
- * - Each component's own rotation (Euler angles in the piece's local frame)
+ * Compute the world-space AABB of a single component, accounting for:
+ * - The component's own rotation (Euler angles in the piece's local frame)
  * - The piece's rotation (applied around the piece origin)
- * - The piece's position (world-space offset)
+ * - The given piece position (world-space offset)
  *
- * Transforms all 8 corners of each component's bounding box through the
- * full hierarchy: component-local → piece-local → world.
+ * Transforms all 8 corners of the component's bounding box through the
+ * full hierarchy: component-local → comp-rotate → comp-translate →
+ * piece-rotate → piece-translate, then takes the axis-aligned bounds.
+ *
+ * Pass `piecePosition = [0, 0, 0]` to get the component's AABB in the
+ * piece's *local* (already piece-rotated) frame — useful for snap face
+ * offsets that only get the piece translation added later.
+ */
+export function computeComponentAABB(
+  comp: FurniturePiece['components'][number],
+  pieceRotation: Vec3,
+  piecePosition: Vec3,
+): AABB {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+
+  const pieceRot = new THREE.Euler(pieceRotation[0], pieceRotation[1], pieceRotation[2]);
+  const compRot = new THREE.Euler(comp.rotation[0], comp.rotation[1], comp.rotation[2]);
+  const compPos = comp.position;
+
+  const [hx, hy, hz] = componentHalfExtents(comp);
+  const corners = componentLocalCorners(hx, hy, hz);
+
+  for (const [lx, ly, lz] of corners) {
+    const corner = new THREE.Vector3(lx, ly, lz).applyEuler(compRot);
+    corner.x += compPos[0];
+    corner.y += compPos[1];
+    corner.z += compPos[2];
+    corner.applyEuler(pieceRot);
+    corner.x += piecePosition[0];
+    corner.y += piecePosition[1];
+    corner.z += piecePosition[2];
+
+    if (corner.x < minX) minX = corner.x;
+    if (corner.x > maxX) maxX = corner.x;
+    if (corner.y < minY) minY = corner.y;
+    if (corner.y > maxY) maxY = corner.y;
+    if (corner.z < minZ) minZ = corner.z;
+    if (corner.z > maxZ) maxZ = corner.z;
+  }
+
+  return { minX, minY, minZ, maxX, maxY, maxZ };
+}
+
+/**
+ * Compute the world-space AABB of a piece. See `computeComponentAABB`
+ * for the transform hierarchy; this aggregates over every component.
  */
 export function computePieceAABB(piece: FurniturePiece): AABB {
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
-  // Pre-build piece rotation (applied after component transforms)
-  const pieceRot = new THREE.Euler(piece.rotation[0], piece.rotation[1], piece.rotation[2]);
-  const piecePos = piece.position;
-
   for (const comp of piece.components) {
-    const [hx, hy, hz] = componentHalfExtents(comp);
-
-    // Component rotation (Euler, default XYZ order — matches THREE.Object3D)
-    const compRot = new THREE.Euler(comp.rotation[0], comp.rotation[1], comp.rotation[2]);
-    const compPos = comp.position;
-
-    // Transform all 8 corners through: local → comp-rotate → comp-translate → piece-rotate → piece-translate
-    const corners: [number, number, number][] = [
-      [-hx, -hy, -hz], [ hx, -hy, -hz],
-      [-hx,  hy, -hz], [ hx,  hy, -hz],
-      [-hx, -hy,  hz], [ hx, -hy,  hz],
-      [-hx,  hy,  hz], [ hx,  hy,  hz],
-    ];
-
-    for (const [lx, ly, lz] of corners) {
-      // Apply component rotation
-      const corner = new THREE.Vector3(lx, ly, lz).applyEuler(compRot);
-      // Translate to component position (in piece's local space)
-      corner.x += compPos[0];
-      corner.y += compPos[1];
-      corner.z += compPos[2];
-      // Apply piece rotation
-      corner.applyEuler(pieceRot);
-      // Translate to piece position (world space)
-      corner.x += piecePos[0];
-      corner.y += piecePos[1];
-      corner.z += piecePos[2];
-
-      if (corner.x < minX) minX = corner.x;
-      if (corner.x > maxX) maxX = corner.x;
-      if (corner.y < minY) minY = corner.y;
-      if (corner.y > maxY) maxY = corner.y;
-      if (corner.z < minZ) minZ = corner.z;
-      if (corner.z > maxZ) maxZ = corner.z;
-    }
+    const aabb = computeComponentAABB(comp, piece.rotation, piece.position);
+    if (aabb.minX < minX) minX = aabb.minX;
+    if (aabb.maxX > maxX) maxX = aabb.maxX;
+    if (aabb.minY < minY) minY = aabb.minY;
+    if (aabb.maxY > maxY) maxY = aabb.maxY;
+    if (aabb.minZ < minZ) minZ = aabb.minZ;
+    if (aabb.maxZ > maxZ) maxZ = aabb.maxZ;
   }
 
   return { minX, minY, minZ, maxX, maxY, maxZ };
