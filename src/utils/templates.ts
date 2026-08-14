@@ -481,7 +481,14 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       rotation: [0, 0, 0],
     });
 
-    // Handles — left door on its right edge, right door on its left edge
+    // Handles — left door on its right (inner) edge, right door on its
+    // left (inner) edge. The doors leave a 2 mm gap down the middle (each
+    // offset by doorGapHalf = 1 mm), so the inner edges sit at x = ∓1.
+    // We inset the knobs 30 mm from the inner edge toward the door center,
+    // mirroring the single-door cabinet's `innerW/2 - 30` placement, so
+    // they land near the opening (ergonomic) instead of on the hinge side.
+    const doorGapHalf = 1;
+    const handleInset = 30;
     components.push({
       id: uuid(),
       type: 'handle',
@@ -489,7 +496,7 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       handleType: 'knob',
       diameter: 25,
       height: 25,
-      position: [-(doorW + 1), handleY, depth / 2 + 1],
+      position: [-(doorGapHalf + handleInset), handleY, depth / 2 + 1],
       rotation: [0, 0, 0],
     });
     components.push({
@@ -499,7 +506,7 @@ export function createDoorCabinet(params: DoorCabinetParams, materials: Material
       handleType: 'knob',
       diameter: 25,
       height: 25,
-      position: [(doorW + 1), handleY, depth / 2 + 1],
+      position: [(doorGapHalf + handleInset), handleY, depth / 2 + 1],
       rotation: [0, 0, 0],
     });
   }

@@ -333,14 +333,6 @@ function TemplateParams({ piece }: { piece: FurniturePiece }) {
         </div>
       )}
 
-      {piece.templateType === 'cabinet' && (
-        <div className="form-row">
-          <label>Doors</label>
-          <input type="number" value={(params.doors as number) ?? 1} min={0} max={2}
-            onChange={(e) => updateParam('doors', Number(e.target.value))} />
-        </div>
-      )}
-
       {piece.templateType === 'door-cabinet' && (
         <div className="form-row">
           <label>Doors</label>

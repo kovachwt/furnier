@@ -75,13 +75,17 @@ App's global handler rotates the selected piece 90° on R; `KeyboardCameraContro
 
 Result: distance labels for legged pieces (desks) float roughly one leg-height too high, and neighbor-gap logic uses inflated AABBs.
 
-### 7. Two-door cabinet: handles mounted on the hinge edges
+### 7. Two-door cabinet: handles mounted on the hinge edges — ✅ FIXED
+
+> **Status update:** `createDoorCabinet` now places the two door knobs on the **inner** edges (the 2 mm center-gap side), inset 30 mm from the gap — mirroring the single-door cabinet's `innerW/2 - 30` inset — instead of at `∓(doorW + 1)` on the outer/hinge edges. Hinge placement is unchanged. Covered by the extended Playwright regression test `cabinet-doors`, which adds a 2-door cabinet and asserts via the store that the two handles sit at `x ≈ ∓31` (inner edges) while the four hinges remain at `x ≈ ∓367` (outer edges), and that the handles are well inboard of the hinge x-extent (the old buggy code put them coincident with the hinges at `∓382`). Original finding below for reference.
 
 **`src/utils/templates.ts:488`** region
 
 Comment says "left door on its right edge", but `[-(doorW + 1), …]` / `[+doorW + 1, …]` are the **outer** (hinge-side) edges. Knobs end up on the hinge side (worst place ergonomically) and centered exactly on the cabinet's outer edge, sticking out past the side.
 
-### 8. Dead "Doors" control for the plain Cabinet template
+### 8. Dead "Doors" control for the plain Cabinet template — ✅ FIXED
+
+> **Status update:** Removed the inert `Doors` form-row from `PieceEditor` for `templateType === 'cabinet'` (the real door handling lives in the separate `door-cabinet` template, which still exposes its own `Doors` 1–2 control). `createCabinet` continues to ignore `params.doors`; the field is retained in `CabinetParams` only so `AddFurniture`'s default-param object stays type-valid (it was always passed but never read). Covered by the `cabinet-doors` regression test, which selects a plain cabinet and asserts (a) the Edit panel renders no `Doors` form-row, and (b) forcing `templateParams.doors = 2` + `regeneratePiece` still yields zero hinges / handles / door panels — proving the param is inert. Original finding below for reference.
 
 `PieceEditor` renders a Doors (0–2) input for `templateType === 'cabinet'`, and `CabinetParams.doors` exists — but `createCabinet` never reads `params.doors`. Regenerating with Doors=2 visibly does nothing.
 
@@ -120,6 +124,7 @@ Inconsistently, name edits, edge-banding toggles, and constraint add/remove neve
 2. ✅ Done — group-drag history flooding (#2): `setPiecesPositions(pos, { skipHistory: true })` in the drag loop; single `pushHistory` from `handleDragEnd`.
 3. ✅ Done — the `pw/ph` swap in both cutout renderers (#3): placed-rect center terms corrected in SVG + PDF; assertion-only regression check added to `panel-cutouts` (no baseline change).
 4. ✅ Done — unified piece-rotation handling: extracted `computeComponentAABB` in `clashDetection.ts`; `alignment.ts` and `snap.ts` now reuse it / `computePieceAABB`; `SmartGuides` uses rotation-aware AABB center. Covered by extended test `rotated-align` (#4).
-5. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".
+5. ✅ Done — cabinet template duo (#7 + #8): two-door handles moved from hinge edges to inner edges (`∩(`/(`1 + 30`) mm from the center gap); the dead `Doors` control removed from the plain `cabinet` editor. Covered by extended test `cabinet-doors`.
+6. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".
 
 Items #1–#3 are small and verifiable, and can be covered with regression checks in the existing Playwright suite. #4 is a proper refactor and belongs in its own commit.
