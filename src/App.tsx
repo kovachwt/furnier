@@ -133,7 +133,7 @@ export default function App() {
         return;
       }
 
-      // Camera keys (WASD, QE, RF) are handled by KeyboardCameraControls inside the Canvas
+      // Camera keys (WASD, QE, Space/C) are handled by KeyboardCameraControls inside the Canvas
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);

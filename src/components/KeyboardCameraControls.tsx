@@ -17,8 +17,19 @@ export function KeyboardCameraControls() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      // Don't hijack browser/OS combos (Ctrl+R reload, Cmd+…)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Skip when typing in form fields or when a focusable control has
+      // focus — Space must keep activating a focused button (a11y).
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (
+        tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        tag === 'BUTTON' || tag === 'A' || el?.isContentEditable
+      ) return;
+      // Space scrolls the page when nothing consumable is focused —
+      // swallow it since we treat it as camera-up.
+      if (e.key === ' ') e.preventDefault();
       pressedKeys.current.add(e.key.toLowerCase());
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -60,9 +71,12 @@ export function KeyboardCameraControls() {
     if (keys.has('a')) translation.addScaledVector(right, -move);
     if (keys.has('d')) translation.addScaledVector(right, move);
 
-    // R/F: vertical movement
-    if (keys.has('r')) translation.y += VERTICAL_SPEED * delta;
-    if (keys.has('f')) translation.y -= VERTICAL_SPEED * delta;
+    // Space / C: vertical movement. (R used to be camera-up but
+    // conflicted with "R = rotate piece 90°" in App's global handler —
+    // one keypress rotated the furniture AND flew the camera. R is
+    // rotate-only now.)
+    if (keys.has(' ')) translation.y += VERTICAL_SPEED * delta;
+    if (keys.has('c')) translation.y -= VERTICAL_SPEED * delta;
 
     if (translation.lengthSq() > 0) {
       camera.position.add(translation);

@@ -38,7 +38,7 @@ const groups: ShortcutGroup[] = [
       { keys: 'W / S', desc: 'Move forward / back' },
       { keys: 'A / D', desc: 'Move left / right' },
       { keys: 'Q / E', desc: 'Orbit left / right' },
-      { keys: 'R / F', desc: 'Move up / down' },
+      { keys: 'Space / C', desc: 'Move up / down' },
     ],
   },
   {

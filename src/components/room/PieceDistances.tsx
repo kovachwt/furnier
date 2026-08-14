@@ -1,66 +1,22 @@
 import { Text, Line } from '@react-three/drei';
-import * as THREE from 'three';
 import { useStore } from '../../store/useStore';
+import { computePieceAABB } from '../../utils/clashDetection';
 import type { FurniturePiece, Vec3 } from '../../types';
 
-/** Compute the world-space axis-aligned bounding box for a piece. */
+/** Compute the world-space axis-aligned bounding box for a piece.
+ *
+ * Reuses the canonical rotation-aware `computePieceAABB` from
+ * clashDetection.ts. PieceDistances used to have its own copy of this
+ * math with `hh = comp.height` for legs — but legs render *centered*
+ * on their position, so the AABB (and every distance label anchored to
+ * `aabb.max[1]`) floated roughly one leg-height too high on legged
+ * pieces like desks. */
 function getPieceAABB(piece: FurniturePiece): { min: Vec3; max: Vec3 } {
-  const pieceQuat = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(piece.rotation[0], piece.rotation[1], piece.rotation[2])
-  );
-
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-  for (const comp of piece.components) {
-    const compQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(comp.rotation[0], comp.rotation[1], comp.rotation[2])
-    );
-    // Total rotation = piece rotation * component rotation
-    const totalQuat = new THREE.Quaternion().multiplyQuaternions(pieceQuat, compQuat);
-    const totalEuler = new THREE.Euler().setFromQuaternion(totalQuat);
-
-    let hw: number, hh: number, hd: number;
-    if (comp.type === 'panel') {
-      hw = comp.width / 2;
-      hh = comp.height / 2;
-      hd = comp.depth / 2;
-    } else if (comp.type === 'leg') {
-      hw = comp.diameter / 2;
-      hh = comp.height; // legs extend upward from position
-      hd = comp.diameter / 2;
-    } else {
-      // hardware — small bounding
-      hw = 20;
-      hh = 20;
-      hd = 20;
-    }
-
-    // Compute rotation-aware half-extents (same formula as snap.ts getAABBHalfExtents)
-    const [rx, ry, rz] = [totalEuler.x, totalEuler.y, totalEuler.z];
-    const cx = Math.cos(rx), sx = Math.sin(rx);
-    const cy = Math.cos(ry), sy = Math.sin(ry);
-    const cz = Math.cos(rz), sz = Math.sin(rz);
-    const ex = Math.abs(cy * cz) * hw + Math.abs(sx * sy * cz - cx * sz) * hh + Math.abs(cx * sy * cz + sx * sz) * hd;
-    const ey = Math.abs(cy * sz) * hw + Math.abs(sx * sy * sz + cx * cz) * hh + Math.abs(cx * sy * sz - sx * cz) * hd;
-    const ez = Math.abs(sy) * hw + Math.abs(sx * cy) * hh + Math.abs(cx * cy) * hd;
-
-    // Rotate component position by piece rotation and add piece position
-    const compPos = new THREE.Vector3(comp.position[0], comp.position[1], comp.position[2]);
-    compPos.applyQuaternion(pieceQuat);
-    const wx = piece.position[0] + compPos.x;
-    const wy = piece.position[1] + compPos.y;
-    const wz = piece.position[2] + compPos.z;
-
-    minX = Math.min(minX, wx - ex);
-    minY = Math.min(minY, wy - ey);
-    minZ = Math.min(minZ, wz - ez);
-    maxX = Math.max(maxX, wx + ex);
-    maxY = Math.max(maxY, wy + ey);
-    maxZ = Math.max(maxZ, wz + ez);
-  }
-
-  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+  const a = computePieceAABB(piece);
+  return {
+    min: [a.minX, a.minY, a.minZ],
+    max: [a.maxX, a.maxY, a.maxZ],
+  };
 }
 
 interface DistanceLabel {

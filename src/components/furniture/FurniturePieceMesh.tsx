@@ -461,6 +461,12 @@ export function FurniturePieceMesh({ piece }: Props) {
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
+        // Piece rotation is intentionally not exposed on this gizmo:
+        // handleDrag only decomposes position/scale, so rotation rings
+        // would animate and silently snap back with no effect. Rotate
+        // pieces with the R key instead (same as the component gizmo
+        // below, which also disables rotations).
+        disableRotations
       >
         {inner}
       </PivotControls>

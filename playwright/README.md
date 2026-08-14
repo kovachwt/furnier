@@ -57,8 +57,8 @@ Convenience npm scripts:
 
 ```bash
 npm run test:visual           # all tests
-npm run test:visual:core      # 25 fast tests (~2-3 min) — the daily driver
-npm run test:visual:extended  # 7 slower tests (align, distribute, undo, search, multi-select, rotated-align)
+npm run test:visual:core      # 26 fast tests (~2-3 min) — the daily driver
+npm run test:visual:extended  # 8 slower tests (align, distribute, undo, search, multi-select, rotated-align, cabinet-doors, group-drag-undo)
 npm run test:visual:update    # regenerate all baselines
 ```
 

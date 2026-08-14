@@ -61,13 +61,17 @@ Verified math: an 800×400 panel placed rotated gets a centered cutout drawn at 
 
 ## 🟠 Medium severity
 
-### 5. 'R' key does two things at once
+### 5. 'R' key does two things at once — ✅ FIXED
+
+> **Status update:** Camera vertical movement moved from `R/F` to **`Space` (up) / `C` (down)** in `KeyboardCameraControls` — `R` is now rotate-only, which is the more prominent documented binding and the one an existing test presses. (Gating camera-up on "no selection" was rejected: you almost always have a piece selected, so camera-up would have been effectively unreachable.) The handler now also skips modifier combos (Ctrl/Cmd/Alt) and focusable-control targets (so Space still activates a focused button), and preventDefaults Space to avoid page scroll. Shortcuts dialog updated (`Space / C — Move up / down`). Covered by the core test `interaction-fixes`: pressing R with a selection rotates the piece with **zero** camera movement; R with no selection does nothing; Space/C fly the camera up/down (asserted via a `window.__camera` test hook, same pattern as `window.__store`). Bonus: this also made `rotate-piece` deterministic — its documented "3–4% GPU rasterization variance" (and the 4.5% threshold workaround) was actually frame-timing-dependent camera drift from R flying the camera up mid-test; the threshold override is removed and the test now self-diffs at 0.000%. Original finding below for reference.
 
 **`src/App.tsx:130`** vs **`src/components/KeyboardCameraControls.tsx`**
 
 App's global handler rotates the selected piece 90° on R; `KeyboardCameraControls` (also listening on `window`) treats R as camera-up. `preventDefault()` doesn't stop sibling listeners, so one keypress **rotates the furniture and flies the camera upward simultaneously**. The shortcuts help dialog documents both bindings as if they don't conflict.
 
-### 6. Leg extents doubled in distance measurement
+### 6. Leg extents doubled in distance measurement — ✅ FIXED
+
+> **Status update:** `PieceDistances` no longer has its own hand-rolled AABB math — it now reuses the canonical rotation-aware `computePieceAABB` from `clashDetection.ts` (introduced by fix #4), which uses `height / 2` for legs and is already covered by `rotated-align`. Covered by the core test `interaction-fixes`: it adds a desk (legged template) and **programmatically** locates the rendered distance-label `Text` meshes in the scene graph (`window.__scene` hook, filtered by PieceDistances' 0.03 font size), asserting every label's world Y ≈ piece height + 50 mm — verified to fail on the old code with labels at y=1.151 instead of 0.800. (A visual diff alone can't pin this: the label shift is ~25 px ≈ 0.12% of the image, far under the 2% threshold.) Original finding below for reference.
 
 **`src/components/room/PieceDistances.tsx:30`**
 
@@ -89,7 +93,9 @@ Comment says "left door on its right edge", but `[-(doorW + 1), …]` / `[+doorW
 
 `PieceEditor` renders a Doors (0–2) input for `templateType === 'cabinet'`, and `CabinetParams.doors` exists — but `createCabinet` never reads `params.doors`. Regenerating with Doors=2 visibly does nothing.
 
-### 9. Piece-level gizmo shows rotation rings that do nothing
+### 9. Piece-level gizmo shows rotation rings that do nothing — ✅ FIXED
+
+> **Status update:** The piece-level `PivotControls` now passes `disableRotations` (with a comment explaining why), matching the component-level gizmo. Piece rotation remains available via the R key. Visually pinned by the updated `rotate-piece` baseline (its old baseline showed the dead rings; ~25k px of the old-vs-new diff is the rings + the camera no longer drifting). Verified via a temporary revert: re-enabling rings changes the `interaction-fixes` render by only 264 px (rings are nearly invisible at desk scale), so `rotate-piece` is the visual guard. Original finding below for reference.
 
 **`src/components/furniture/FurniturePieceMesh.tsx`**
 
@@ -125,6 +131,6 @@ Inconsistently, name edits, edge-banding toggles, and constraint add/remove neve
 3. ✅ Done — the `pw/ph` swap in both cutout renderers (#3): placed-rect center terms corrected in SVG + PDF; assertion-only regression check added to `panel-cutouts` (no baseline change).
 4. ✅ Done — unified piece-rotation handling: extracted `computeComponentAABB` in `clashDetection.ts`; `alignment.ts` and `snap.ts` now reuse it / `computePieceAABB`; `SmartGuides` uses rotation-aware AABB center. Covered by extended test `rotated-align` (#4).
 5. ✅ Done — cabinet template duo (#7 + #8): two-door handles moved from hinge edges to inner edges (`∩(`/(`1 + 30`) mm from the center gap); the dead `Doors` control removed from the plain `cabinet` editor. Covered by extended test `cabinet-doors`.
-6. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".
-
-Items #1–#3 are small and verifiable, and can be covered with regression checks in the existing Playwright suite. #4 is a proper refactor and belongs in its own commit.
+5. ✅ Done — viewport-interaction trio (#5 + #6 + #9, one batch): camera vertical moved to Space/C (R rotate-only, `KeyboardShortcuts` updated); `PieceDistances` reuses canonical `computePieceAABB` (leg extents fixed); piece-level gizmo `disableRotations`. Covered by the new core test `interaction-fixes` (+ rotate-piece baseline update, threshold workaround removed). Test hooks `window.__camera` / `__controls` / `__scene` exposed in `Scene.tsx`.
+6. Undo per keystroke in number inputs (#10) — needs a commit-on-blur / debounce UX decision; own batch.
+7. Low-severity polish list — grab-bag batch.

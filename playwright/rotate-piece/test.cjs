@@ -9,15 +9,18 @@
 // to look correct at 0°/180° because the doubled rotation wraps to 0).
 // The test pins the correct behavior: only the piece rotation changes;
 // component rotations are preserved as their template-defined values.
+//
+// This test also transitively pins the R-key conflict fix: R used to
+// fly the camera up while rotating, and the resulting frame-timing-
+// dependent camera drift made run-to-run self-diffs land at 3–4%
+// (previously worked around with a 4.5% threshold — misdiagnosed as
+// "GPU rasterization variance"). With camera-up moved to Space/C the
+// render is byte-identical between runs, so the default 2% threshold
+// applies again.
 
 module.exports = {
   name: 'rotate-piece',
   description: 'Add a cabinet and rotate it 90° with the R key',
-  // Rotated geometry produces heavy anti-aliased diagonal edges, so
-  // same-code self-diff run-to-run is ~3–4% from GPU rasterization
-  // variance alone. The default 2% threshold flakes ~half the time;
-  // 4.5% keeps it green while still catching real regressions.
-  maxDiffRatio: 0.045,
   action: async (page, app) => {
     await app.addPiece(page, { template: 'cabinet' });
     await page.waitForTimeout(500);

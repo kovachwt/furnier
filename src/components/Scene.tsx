@@ -1,5 +1,5 @@
-import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useEffect } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Line } from '@react-three/drei';
 import { useStore } from '../store/useStore';
 import { RoomBox, mmToWorld } from './room/RoomBox';
@@ -202,6 +202,26 @@ function SmartGuides() {
   );
 }
 
+/**
+ * Expose the R3F camera, the default OrbitControls, and the scene —
+ * `window.__camera` / `window.__controls` / `window.__scene` — same
+ * pattern as `window.__store` in App.tsx. Used by the Playwright suite
+ * to assert / restore camera position and to locate rendered overlays
+ * (e.g. distance labels) in the scene graph, plus ad-hoc devtools
+ * debugging.
+ */
+function CameraExpose() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls);
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    (window as unknown as { __camera?: unknown }).__camera = camera;
+    (window as unknown as { __controls?: unknown }).__controls = controls;
+    (window as unknown as { __scene?: unknown }).__scene = scene;
+  }, [camera, controls, scene]);
+  return null;
+}
+
 function SnapGuides() {
   const activeSnapLines = useStore((s) => s.activeSnapLines);
   const room = useStore((s) => s.project.room);
@@ -333,6 +353,7 @@ export function Scene() {
       <KeyboardCameraControls />
       <CameraAnimator />
       <ViewportCapture />
+      <CameraExpose />
       <Suspense fallback={null}>
         <PieceDistances />
       </Suspense>
