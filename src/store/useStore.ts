@@ -343,7 +343,7 @@ interface AppState {
   deletePieces: (ids: string[]) => void;
   rotatePiecesBy: (ids: string[], angleDeg: number) => void;
   nudgePieces: (ids: string[], dx: number, dy: number, dz: number) => void;
-  setPiecesPositions: (positions: Record<string, Vec3>) => void;
+  setPiecesPositions: (positions: Record<string, Vec3>, opts?: { skipHistory?: boolean }) => void;
 
   // Movement
   nudgeSelectedPiece: (dx: number, dy: number, dz: number) => void;
@@ -779,7 +779,7 @@ export const useStore = create<AppState>()(
       get().pushHistory();
     },
 
-    setPiecesPositions: (positions) => {
+    setPiecesPositions: (positions, opts) => {
       set(produce((s: AppState) => {
         for (const [id, pos] of Object.entries(positions)) {
           const p = s.project.pieces.find((pp) => pp.id === id);
@@ -791,7 +791,10 @@ export const useStore = create<AppState>()(
           ];
         }
       }));
-      get().pushHistory();
+      // During a multi-piece drag this is called on every pointer move;
+      // the drag loop passes { skipHistory: true } and pushes a single
+      // entry from handleDragEnd instead (same as single-piece drags).
+      if (!opts?.skipHistory) get().pushHistory();
     },
 
     alignPieces: (ids, axis, mode) => {

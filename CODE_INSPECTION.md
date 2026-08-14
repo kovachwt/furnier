@@ -22,7 +22,9 @@ Repro (verified by execution): a grain-locked material (2500×1250 sheet) with a
 
 `findSheetOverflow` also doesn't account for `grainDirection` blocking the rotated fit. `guillotinePack` should return its leftovers so `generateCutList` can surface them.
 
-### 2. Multi-piece drag floods the undo history
+### 2. Multi-piece drag floods the undo history — ✅ FIXED
+
+> **Status update:** `setPiecesPositions` now takes an optional `{ skipHistory }` flag; the group-drag loop in `FurniturePieceMesh.handleDrag` passes it so intermediate moves don't push history, and `handleDragEnd` pushes the single entry (identical to the single-piece drag pattern). Align/distribute still use the default one-push-per-call behavior. Covered by the core Playwright regression test `group-drag-undo` (real gizmo mouse-drag; asserts exactly one history entry per drag and that one Ctrl+Z restores both pieces). Original finding below for reference.
 
 **`src/components/furniture/FurniturePieceMesh.tsx:282` → `src/store/useStore.ts:782` (`setPiecesPositions`)**
 
@@ -111,7 +113,7 @@ Inconsistently, name edits, edge-banding toggles, and constraint add/remove neve
 ## Suggested fix order
 
 1. ✅ Done — `guillotinePack` returning unplaceables + `findSheetOverflow` grain check (#1, commit `7682da4`).
-2. Group-drag history flooding (#2) — one-line fix with a `{ skipHistory }` variant.
+2. ✅ Done — group-drag history flooding (#2): `setPiecesPositions(pos, { skipHistory: true })` in the drag loop; single `pushHistory` from `handleDragEnd`.
 3. The `pw/ph` swap in both cutout renderers (#3) — two-line fix, verified math above.
 4. Unify piece-rotation handling by reusing `computePieceAABB`-style transforms in `snap.ts` / `alignment.ts` (#4).
 5. R-key conflict decision (#5) — either move camera-up off R or gate on "no selection".

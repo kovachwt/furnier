@@ -279,7 +279,9 @@ export function FurniturePieceMesh({ piece }: Props) {
           s[2] + dz,
         ];
       }
-      state.setPiecesPositions(positions);
+      // skipHistory: the drag loop runs on every pointer move; a single
+      // history entry is pushed by handleDragEnd when the drag finishes.
+      state.setPiecesPositions(positions, { skipHistory: true });
       return;
     }
 
